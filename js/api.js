@@ -1,278 +1,408 @@
-// API module – fetches from Wikipedia, Yahoo Finance (unofficial), RSS
-// All calls are CORS-safe and free (no API key needed)
-
-const CORS_PROXY = "https://corsproxy.io/?"; // free CORS proxy for RSS
+// ============================================================
+//  API MODULE
+//  Sources: Wikipedia, Wikidata, Yahoo Finance (unofficial),
+//           Google News RSS, Yahoo Finance RSS
+//  All free, no API key required
+// ============================================================
 
 const API = {
 
-  // ── Wikipedia ────────────────────────────────────────────────
-  async getWikipedia(wikiTitle, lang = "de") {
-    const cacheKey = `wiki_${lang}_${wikiTitle}`;
-    const cached = Cache.get(cacheKey);
+  // ── Wikipedia Summary ─────────────────────────────────────
+  async getWikipedia(title, lang = "de") {
+    const key = `wiki_${lang}_${title}`;
+    const cached = Cache.get(key);
     if (cached) return cached;
-
-    // Try requested language; fall back to EN
-    const langs = lang === "de" ? ["de","en"] : ["en","de"];
-    for (const l of langs) {
+    for (const l of lang === "de" ? ["de","en"] : ["en","de"]) {
       try {
-        const url = `https://${l}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(wikiTitle)}`;
-        const r = await fetch(url);
+        const r = await fetch(`https://${l}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`);
         if (!r.ok) continue;
         const d = await r.json();
-        const result = {
+        const res = {
           extract: d.extract || "",
           thumbnail: d.thumbnail?.source || null,
-          url: d.content_urls?.desktop?.page || `https://${l}.wikipedia.org/wiki/${wikiTitle}`,
-          lang: l,
-          title: d.title || wikiTitle,
-          description: d.description || ""
+          url: d.content_urls?.desktop?.page || `https://${l}.wikipedia.org/wiki/${title}`,
+          lang: l, title: d.title || title, description: d.description || ""
         };
-        Cache.set(cacheKey, result);
-        return result;
+        Cache.set(key, res, CACHE_TTL_LONG);
+        return res;
       } catch(e) {}
     }
     return null;
   },
 
-  // ── Wikidata (structured facts) ───────────────────────────────
+  // ── Wikidata Structured Facts ──────────────────────────────
   async getWikidata(qid) {
-    const cacheKey = `wikidata_${qid}`;
-    const cached = Cache.get(cacheKey);
+    if (!qid) return null;
+    const key = `wikidata_${qid}`;
+    const cached = Cache.get(key);
     if (cached) return cached;
     try {
-      const url = `https://www.wikidata.org/wiki/Special:EntityData/${qid}.json`;
-      const r = await fetch(url);
+      const r = await fetch(`https://www.wikidata.org/wiki/Special:EntityData/${qid}.json`);
       if (!r.ok) return null;
       const d = await r.json();
       const entity = d.entities[qid];
-      const claims = entity.claims || {};
-      const get = (pid) => {
-        const c = claims[pid];
-        if (!c || !c[0]) return null;
-        const v = c[0].mainsnak?.datavalue?.value;
-        return v;
+      const claims = entity?.claims || {};
+      const get = pid => claims[pid]?.[0]?.mainsnak?.datavalue?.value ?? null;
+      const getLabel = pid => {
+        const v = claims[pid]?.[0]?.mainsnak?.datavalue?.value;
+        if (!v) return null;
+        return v.id || null; // wikidata entity ID
       };
-      const result = {
+      const res = {
         isin: get("P946"),
-        founded: get("P571")?.time?.substring(1,5),
-        employees: get("P1128")?.amount,
-        ceo: null, // too complex to extract cleanly
+        founded: get("P571")?.time?.substring(1, 5),
+        employees: get("P1128")?.amount ? Math.round(Number(get("P1128").amount)).toLocaleString("de-DE") : null,
         website: get("P856"),
-        revenue: get("P2139")?.amount,
-        hq: get("P159"),
         lei: get("P1278"),
+        ceo: getLabel("P169"),
+        hqEntity: getLabel("P159"),
+        stockSymbol: get("P249"),
+        revenue: get("P2139"),
+        netIncome: get("P2295"),
+        totalAssets: get("P2403"),
+        equityOwner: getLabel("P127"),
       };
-      Cache.set(cacheKey, result);
-      return result;
+      Cache.set(key, res, CACHE_TTL_LONG);
+      return res;
     } catch(e) { return null; }
   },
 
-  // ── Yahoo Finance (unofficial, no key needed) ─────────────────
+  // ── Yahoo Finance – Current Quote ─────────────────────────
   async getQuote(ticker) {
-    const cacheKey = `quote_${ticker}`;
-    const cached = Cache.get(cacheKey);
-    if (cached) return cached;
+    if (!ticker || ticker === "-") return null;
+    const key = `quote_${ticker}`;
+    const cached = Cache.get(key);
+    if (cached) return { ...cached, _cached: true };
     try {
-      // Yahoo Finance v8 – works from browser via CORS
-      const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&range=5d`;
-      const r = await fetch(url);
-      if (!r.ok) throw new Error("Yahoo failed");
+      const r = await fetch(
+        `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&range=5d`,
+        { signal: AbortSignal.timeout(6000) }
+      );
+      if (!r.ok) throw new Error();
       const d = await r.json();
       const meta = d.chart?.result?.[0]?.meta;
       if (!meta) return null;
-      const result = {
+      const res = {
         price: meta.regularMarketPrice,
-        currency: meta.currency,
+        prevClose: meta.chartPreviousClose,
         change: meta.regularMarketPrice - meta.chartPreviousClose,
-        changePct: ((meta.regularMarketPrice - meta.chartPreviousClose) / meta.chartPreviousClose * 100).toFixed(2),
+        changePct: ((meta.regularMarketPrice - meta.chartPreviousClose) / meta.chartPreviousClose * 100),
+        currency: meta.currency,
         high52: meta.fiftyTwoWeekHigh,
         low52: meta.fiftyTwoWeekLow,
-        marketCap: null, // not in v8
         exchange: meta.exchangeName,
-        updated: new Date(meta.regularMarketTime * 1000).toLocaleString("de-DE")
+        marketState: meta.marketState,
+        updatedTs: meta.regularMarketTime * 1000
       };
-      Cache.set(cacheKey, result);
-      return result;
-    } catch(e) {
-      // Fallback: Yahoo Finance v7 quote endpoint
-      try {
-        const url2 = `https://query2.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(ticker)}&fields=regularMarketPrice,regularMarketChangePercent,marketCap,fiftyTwoWeekHigh,fiftyTwoWeekLow,currency,regularMarketChange`;
-        const r2 = await fetch(url2);
-        if (!r2.ok) return null;
-        const d2 = await r2.json();
-        const q = d2.quoteResponse?.result?.[0];
-        if (!q) return null;
-        const result = {
-          price: q.regularMarketPrice,
-          currency: q.currency,
-          change: q.regularMarketChange,
-          changePct: q.regularMarketChangePercent?.toFixed(2),
-          high52: q.fiftyTwoWeekHigh,
-          low52: q.fiftyTwoWeekLow,
-          marketCap: q.marketCap,
-          updated: new Date().toLocaleString("de-DE")
-        };
-        Cache.set(cacheKey, result);
-        return result;
-      } catch(e2) { return null; }
-    }
-  },
-
-  // ── Yahoo Finance – Key Financials (income statement) ─────────
-  async getFinancials(ticker) {
-    const cacheKey = `fin_${ticker}`;
-    const cached = Cache.get(cacheKey);
-    if (cached) return cached;
-    try {
-      const url = `https://query1.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(ticker)}?modules=financialData,defaultKeyStatistics,summaryDetail`;
-      const r = await fetch(url);
-      if (!r.ok) return null;
-      const d = await r.json();
-      const fin = d.quoteSummary?.result?.[0];
-      if (!fin) return null;
-      const fd = fin.financialData || {};
-      const ks = fin.defaultKeyStatistics || {};
-      const sd = fin.summaryDetail || {};
-      const result = {
-        revenue: fd.totalRevenue?.raw,
-        revenueGrowth: fd.revenueGrowth?.raw,
-        grossProfit: fd.grossProfits?.raw,
-        operatingMargin: fd.operatingMargins?.raw,
-        netIncome: fd.netIncomeToCommon?.raw,
-        eps: fd.trailingEps?.raw,
-        peRatio: sd.trailingPE?.raw,
-        pbRatio: ks.priceToBook?.raw,
-        debtToEquity: fd.debtToEquity?.raw,
-        roe: fd.returnOnEquity?.raw,
-        roa: fd.returnOnAssets?.raw,
-        freeCashFlow: fd.freeCashflow?.raw,
-        dividendYield: sd.dividendYield?.raw,
-        beta: ks.beta?.raw,
-        sharesOutstanding: ks.sharesOutstanding?.raw,
-        analystRating: fd.recommendationKey,
-        targetPrice: fd.targetMeanPrice?.raw,
-        numAnalysts: fd.numberOfAnalystOpinions?.raw,
-      };
-      Cache.set(cacheKey, result);
-      return result;
+      Cache.set(key, res, CACHE_TTL_SHORT);
+      return res;
     } catch(e) { return null; }
   },
 
-  // ── RSS News (via corsproxy) ──────────────────────────────────
-  async getNews(company, lang = "de") {
-    const cacheKey = `news_${company.id}_${lang}`;
-    const cached = Cache.get(cacheKey);
+  // ── Yahoo Finance – Full Financials ───────────────────────
+  async getFinancials(ticker) {
+    if (!ticker || ticker === "-") return null;
+    const key = `fin_${ticker}`;
+    const cached = Cache.get(key);
     if (cached) return cached;
+    try {
+      const mods = "financialData,defaultKeyStatistics,summaryDetail,incomeStatementHistory,incomeStatementHistoryQuarterly,earningsHistory,earningsTrend";
+      const r = await fetch(
+        `https://query1.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(ticker)}?modules=${mods}`,
+        { signal: AbortSignal.timeout(8000) }
+      );
+      if (!r.ok) return null;
+      const d = await r.json();
+      const res = d.quoteSummary?.result?.[0];
+      if (!res) return null;
+      const fd = res.financialData || {};
+      const ks = res.defaultKeyStatistics || {};
+      const sd = res.summaryDetail || {};
+      const is = res.incomeStatementHistory?.incomeStatementHistory || [];
+      const isq = res.incomeStatementHistoryQuarterly?.incomeStatementHistory || [];
+      const et = res.earningsTrend?.trend || [];
 
-    // Multiple RSS sources for news
-    const rssSources = lang === "de" ? [
-      `https://corsproxy.io/?${encodeURIComponent(`https://news.google.com/rss/search?q=${encodeURIComponent(company.name)}&hl=de&gl=DE&ceid=DE:de`)}`,
-      `https://corsproxy.io/?${encodeURIComponent(`https://www.finanzen.net/rss/news/${company.ticker}`)}`,
-    ] : [
-      `https://corsproxy.io/?${encodeURIComponent(`https://news.google.com/rss/search?q=${encodeURIComponent(company.name)}+stock&hl=en&gl=US&ceid=US:en`)}`,
-      `https://corsproxy.io/?${encodeURIComponent(`https://feeds.finance.yahoo.com/rss/2.0/headline?s=${company.ticker}&region=US&lang=en-US`)}`,
-    ];
+      // Annual income statement (last 4 years)
+      const annualIS = is.map(y => ({
+        date: y.endDate?.fmt,
+        revenue: y.totalRevenue?.raw,
+        grossProfit: y.grossProfit?.raw,
+        ebit: y.ebit?.raw,
+        netIncome: y.netIncome?.raw,
+        rd: y.researchDevelopment?.raw,
+        tax: y.incomeTaxExpense?.raw,
+        totalExpenses: y.totalOperatingExpenses?.raw,
+        incomeBeforeTax: y.incomeBeforeExpensesTax?.raw || y.pretaxIncome?.raw,
+      }));
 
-    let articles = [];
-    for (const rssUrl of rssSources) {
-      try {
-        const r = await fetch(rssUrl, { signal: AbortSignal.timeout(5000) });
-        if (!r.ok) continue;
-        const xml = await r.text();
-        const parsed = parseRSS(xml);
-        articles.push(...parsed);
-        if (articles.length >= 8) break;
-      } catch(e) {}
-    }
+      // Quarterly net income (last 8Q)
+      const quarterlyNI = isq.map(q => ({
+        date: q.endDate?.fmt,
+        revenue: q.totalRevenue?.raw,
+        netIncome: q.netIncome?.raw,
+        ebit: q.ebit?.raw,
+        grossProfit: q.grossProfit?.raw,
+      }));
 
-    // Deduplicate by title
-    const seen = new Set();
-    articles = articles.filter(a => {
-      if (seen.has(a.title)) return false;
-      seen.add(a.title); return true;
-    }).slice(0, 10);
+      const fin = {
+        // Current
+        revenue: fd.totalRevenue?.raw,
+        revenueGrowth: fd.revenueGrowth?.raw,
+        grossProfit: null, // from IS
+        grossMargin: fd.grossMargins?.raw,
+        ebitda: fd.ebitda?.raw,
+        ebitdaMargin: fd.ebitdaMargins?.raw,
+        operatingMargin: fd.operatingMargins?.raw,
+        netIncome: fd.netIncomeToCommon?.raw,
+        netMargin: fd.profitMargins?.raw,
+        eps: fd.trailingEps?.raw,
+        epsForward: ks.forwardEps?.raw,
+        peRatio: sd.trailingPE?.raw,
+        peForward: sd.forwardPE?.raw,
+        pbRatio: ks.priceToBook?.raw,
+        psRatio: ks.priceToSalesTrailing12Months?.raw,
+        evRevenue: ks.enterpriseToRevenue?.raw,
+        evEbitda: ks.enterpriseToEbitda?.raw,
+        marketCap: ks.marketCap?.raw || sd.marketCap?.raw,
+        enterpriseValue: ks.enterpriseValue?.raw,
+        roe: fd.returnOnEquity?.raw,
+        roa: fd.returnOnAssets?.raw,
+        roic: null,
+        freeCashFlow: fd.freeCashflow?.raw,
+        operatingCashFlow: fd.operatingCashflow?.raw,
+        debtToEquity: fd.debtToEquity?.raw,
+        currentRatio: fd.currentRatio?.raw,
+        quickRatio: fd.quickRatio?.raw,
+        dividendYield: sd.dividendYield?.raw,
+        dividendRate: sd.dividendRate?.raw,
+        payoutRatio: sd.payoutRatio?.raw,
+        beta: ks.beta?.raw,
+        sharesOutstanding: ks.sharesOutstanding?.raw,
+        shortFloat: ks.shortPercentOfFloat?.raw,
+        analystRating: fd.recommendationKey,
+        analystMean: fd.recommendationMean?.raw,
+        targetPrice: fd.targetMeanPrice?.raw,
+        targetHigh: fd.targetHighPrice?.raw,
+        targetLow: fd.targetLowPrice?.raw,
+        numAnalysts: fd.numberOfAnalystOpinions?.raw,
+        taxRate: null, // computed from IS
+        // Historical
+        annualIS,
+        quarterlyNI,
+        earningsTrend: et,
+      };
 
-    Cache.set(cacheKey, articles);
-    return articles;
+      // Compute gross margin from IS if available
+      if (annualIS.length > 0 && annualIS[0].revenue && annualIS[0].grossProfit) {
+        fin.grossProfit = annualIS[0].grossProfit;
+      }
+      // Effective tax rate
+      if (annualIS.length > 0) {
+        const y = annualIS[0];
+        if (y.incomeBeforeTax && y.tax) {
+          fin.taxRate = Math.abs(y.tax) / Math.abs(y.incomeBeforeTax);
+        }
+        fin.rdInvestment = y.rd;
+      }
+
+      Cache.set(key, fin, CACHE_TTL_MED);
+      return fin;
+    } catch(e) { return null; }
   },
 
-  // ── Annual Reports / IR Page lookup ──────────────────────────
+  // ── Yahoo Finance – 12-month Price History ─────────────────
+  async getPriceHistory(ticker) {
+    if (!ticker || ticker === "-") return null;
+    const key = `hist_${ticker}`;
+    const cached = Cache.get(key);
+    if (cached) return cached;
+    try {
+      const r = await fetch(
+        `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1wk&range=1y`,
+        { signal: AbortSignal.timeout(8000) }
+      );
+      if (!r.ok) return null;
+      const d = await r.json();
+      const result = d.chart?.result?.[0];
+      if (!result) return null;
+      const ts = result.timestamp || [];
+      const closes = result.indicators?.quote?.[0]?.close || [];
+      const volumes = result.indicators?.quote?.[0]?.volume || [];
+      const highs = result.indicators?.quote?.[0]?.high || [];
+      const lows = result.indicators?.quote?.[0]?.low || [];
+      const res = {
+        dates: ts.map(t => new Date(t * 1000).toISOString().substring(0, 10)),
+        closes: closes.map(v => v ? parseFloat(v.toFixed(2)) : null),
+        volumes: volumes,
+        highs: highs.map(v => v ? parseFloat(v.toFixed(2)) : null),
+        lows: lows.map(v => v ? parseFloat(v.toFixed(2)) : null),
+        currency: result.meta?.currency
+      };
+      Cache.set(key, res, CACHE_TTL_MED);
+      return res;
+    } catch(e) { return null; }
+  },
+
+  // ── Yahoo Finance – Ownership / Holders ────────────────────
+  async getOwnership(ticker) {
+    if (!ticker || ticker === "-") return null;
+    const key = `own_${ticker}`;
+    const cached = Cache.get(key);
+    if (cached) return cached;
+    try {
+      const r = await fetch(
+        `https://query1.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(ticker)}?modules=majorHoldersBreakdown,institutionOwnership,insiderHolders`,
+        { signal: AbortSignal.timeout(6000) }
+      );
+      if (!r.ok) return null;
+      const d = await r.json();
+      const res2 = d.quoteSummary?.result?.[0];
+      if (!res2) return null;
+      const mh = res2.majorHoldersBreakdown || {};
+      const inst = res2.institutionOwnership?.ownershipList || [];
+      const res = {
+        insiderPct: mh.insidersPercentHeld?.raw,
+        institutionPct: mh.institutionsPercentHeld?.raw,
+        floatPct: mh.institutionsFloatPercentHeld?.raw,
+        institutionCount: mh.institutionsCount?.raw,
+        topInstitutions: inst.slice(0, 8).map(i => ({
+          name: i.organization,
+          pct: i.pctHeld?.raw,
+          shares: i.position?.raw,
+          value: i.value?.raw,
+          change: i.pctChange?.raw
+        }))
+      };
+      Cache.set(key, res, CACHE_TTL_MED);
+      return res;
+    } catch(e) { return null; }
+  },
+
+  // ── Yahoo Finance – Management / Officers ──────────────────
+  async getManagement(ticker) {
+    if (!ticker || ticker === "-") return null;
+    const key = `mgmt_${ticker}`;
+    const cached = Cache.get(key);
+    if (cached) return cached;
+    try {
+      const r = await fetch(
+        `https://query1.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(ticker)}?modules=assetProfile`,
+        { signal: AbortSignal.timeout(6000) }
+      );
+      if (!r.ok) return null;
+      const d = await r.json();
+      const ap = d.quoteSummary?.result?.[0]?.assetProfile || {};
+      const res = {
+        industry: ap.industry,
+        sector: ap.sector,
+        description: ap.longBusinessSummary,
+        website: ap.website,
+        fullTimeEmployees: ap.fullTimeEmployees,
+        country: ap.country,
+        city: ap.city,
+        officers: (ap.companyOfficers || []).slice(0, 6).map(o => ({
+          name: o.name,
+          title: o.title,
+          age: o.age,
+          pay: o.totalPay?.raw
+        }))
+      };
+      Cache.set(key, res, CACHE_TTL_MED);
+      return res;
+    } catch(e) { return null; }
+  },
+
+  // ── News via RSS ───────────────────────────────────────────
+  async getNews(company, lang = "de") {
+    const key = `news_${company.id}_${lang}`;
+    const cached = Cache.get(key);
+    if (cached) return cached;
+    const name = encodeURIComponent(company.name);
+    const ticker = company.ticker !== "-" ? company.ticker : "";
+    const sources = lang === "de" ? [
+      `https://corsproxy.io/?${encodeURIComponent(`https://news.google.com/rss/search?q=${name}&hl=de&gl=DE&ceid=DE:de`)}`,
+      ticker ? `https://corsproxy.io/?${encodeURIComponent(`https://feeds.finance.yahoo.com/rss/2.0/headline?s=${ticker}&region=DE&lang=de-DE`)}` : null,
+    ] : [
+      `https://corsproxy.io/?${encodeURIComponent(`https://news.google.com/rss/search?q=${name}+stock&hl=en-US&gl=US&ceid=US:en`)}`,
+      ticker ? `https://corsproxy.io/?${encodeURIComponent(`https://feeds.finance.yahoo.com/rss/2.0/headline?s=${ticker}&region=US&lang=en-US`)}` : null,
+    ];
+    let arts = [];
+    for (const src of sources.filter(Boolean)) {
+      try {
+        const r = await fetch(src, { signal: AbortSignal.timeout(5000) });
+        if (!r.ok) continue;
+        arts.push(...parseRSS(await r.text()));
+        if (arts.length >= 12) break;
+      } catch(e) {}
+    }
+    const seen = new Set();
+    arts = arts.filter(a => { if (seen.has(a.title)) return false; seen.add(a.title); return true; }).slice(0, 12);
+    Cache.set(key, arts, CACHE_TTL_SHORT);
+    return arts;
+  },
+
+  // ── IR Links builder ──────────────────────────────────────
   getIRLinks(company) {
-    // Known IR page patterns; fallback to Google search
-    const domain = company.website || null;
     const links = [];
-    if (domain) {
-      links.push({ label: "Investor Relations", url: domain + "/investors" });
-    }
-    // SEC EDGAR for US companies
+    const yr = new Date().getFullYear() - 1;
     if (company.country === "US") {
-      links.push({
-        label: "SEC Filings (EDGAR)",
-        url: `https://www.sec.gov/cgi-bin/browse-edgar?company=${encodeURIComponent(company.name)}&action=getcompany&type=10-K&dateb=&owner=include&count=10`
-      });
+      links.push({ label: "SEC EDGAR (10-K, 10-Q)", url: `https://www.sec.gov/cgi-bin/browse-edgar?company=${encodeURIComponent(company.name)}&action=getcompany&type=10-K&dateb=&owner=include&count=10`, icon: "📄" });
+      links.push({ label: "SEC EDGAR (alle Einreichungen)", url: `https://efts.sec.gov/LATEST/search-index?q=%22${encodeURIComponent(company.name)}%22&dateRange=custom&startdt=${yr-1}-01-01&enddt=${yr+1}-12-31&forms=10-K,10-Q`, icon: "📋" });
     }
-    // Bundesanzeiger for DE
     if (company.country === "DE") {
-      links.push({
-        label: "Bundesanzeiger",
-        url: `https://www.bundesanzeiger.de/pub/de/search?fulltext=${encodeURIComponent(company.name)}`
-      });
-      links.push({
-        label: "DGAP-Meldungen",
-        url: `https://dgap.de/dgap/Public/search/?q=${encodeURIComponent(company.name)}`
-      });
+      links.push({ label: "Bundesanzeiger", url: `https://www.bundesanzeiger.de/pub/de/search?fulltext=${encodeURIComponent(company.name)}`, icon: "🏛️" });
+      links.push({ label: "DGAP / EQS Meldungen", url: `https://dgap.de/dgap/Public/search/?q=${encodeURIComponent(company.name)}`, icon: "📡" });
     }
-    // Annual report search fallback
-    links.push({
-      label: "Geschäftsbericht (Suche)",
-      url: `https://www.google.com/search?q=${encodeURIComponent(company.name)}+Geschäftsbericht+${new Date().getFullYear()-1}+PDF`
-    });
-    links.push({
-      label: "Annual Report (Search)",
-      url: `https://www.google.com/search?q=${encodeURIComponent(company.name)}+annual+report+${new Date().getFullYear()-1}+PDF`
-    });
+    if (["DE","FR","NL","ES","IT","BE","SE","FI","DK"].includes(company.country)) {
+      links.push({ label: "BaFin Datenbank", url: `https://portal.mvp.bafin.de/database/ProspectSearch/prospect.do;jsessionid=?execution=e1s1`, icon: "🇪🇺" });
+    }
+    links.push({ label: `Geschäftsbericht ${yr} (Google)`, url: `https://www.google.com/search?q=${encodeURIComponent(company.name)}+Geschäftsbericht+${yr}+PDF`, icon: "🔍" });
+    links.push({ label: "Annual Report (Google)", url: `https://www.google.com/search?q=${encodeURIComponent(company.name)}+annual+report+${yr}+PDF`, icon: "🔍" });
+    links.push({ label: "Yahoo Finance", url: `https://finance.yahoo.com/quote/${company.ticker !== "-" ? company.ticker : encodeURIComponent(company.name)}`, icon: "📈" });
+    if (company.wikipedia) {
+      links.push({ label: "Wikipedia", url: `https://en.wikipedia.org/wiki/${company.wikipedia}`, icon: "📖" });
+    }
     return links;
   }
 };
 
-// ── RSS XML Parser ────────────────────────────────────────────────
+// ── RSS parser ─────────────────────────────────────────────
 function parseRSS(xml) {
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(xml, "text/xml");
-  const items = doc.querySelectorAll("item");
-  const results = [];
-  items.forEach(item => {
-    const title = item.querySelector("title")?.textContent?.trim() || "";
-    const link = item.querySelector("link")?.textContent?.trim() || "";
-    const pubDate = item.querySelector("pubDate")?.textContent?.trim() || "";
-    const source = item.querySelector("source")?.textContent?.trim() || "";
-    const desc = item.querySelector("description")?.textContent?.replace(/<[^>]*>/g,"").trim().substring(0, 200) || "";
-    if (title && link) {
-      results.push({
-        title: title.replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">"),
-        link,
-        date: pubDate ? new Date(pubDate).toLocaleDateString("de-DE") : "",
-        source,
-        desc
-      });
-    }
-  });
-  return results;
+  try {
+    const doc = new DOMParser().parseFromString(xml, "text/xml");
+    return Array.from(doc.querySelectorAll("item")).map(item => ({
+      title: item.querySelector("title")?.textContent?.trim().replace(/&amp;/g,"&") || "",
+      link: item.querySelector("link")?.textContent?.trim() || "",
+      date: (() => { try { return new Date(item.querySelector("pubDate")?.textContent).toLocaleDateString("de-DE"); } catch(e) { return ""; } })(),
+      source: item.querySelector("source")?.textContent?.trim() || "",
+      desc: (item.querySelector("description")?.textContent || "").replace(/<[^>]*>/g,"").trim().substring(0, 240)
+    })).filter(a => a.title && a.link);
+  } catch(e) { return []; }
 }
 
-// ── Format helpers ─────────────────────────────────────────────
-function formatNum(n, currency = "") {
-  if (n === null || n === undefined) return "–";
-  const abs = Math.abs(n);
+// ── Number formatters ──────────────────────────────────────
+function fmtNum(n, cur = "", compact = true) {
+  if (n === null || n === undefined || isNaN(n)) return "–";
+  n = Number(n);
   let s;
-  if (abs >= 1e12) s = (n/1e12).toFixed(2) + " Bil.";
-  else if (abs >= 1e9) s = (n/1e9).toFixed(2) + " Mrd.";
-  else if (abs >= 1e6) s = (n/1e6).toFixed(2) + " Mio.";
-  else s = n.toLocaleString("de-DE");
-  return currency ? `${s} ${currency}` : s;
+  if (compact) {
+    const abs = Math.abs(n);
+    if (abs >= 1e12) s = (n/1e12).toFixed(2) + " Bio.";
+    else if (abs >= 1e9) s = (n/1e9).toFixed(2) + " Mrd.";
+    else if (abs >= 1e6) s = (n/1e6).toFixed(2) + " Mio.";
+    else s = n.toLocaleString("de-DE", { maximumFractionDigits: 0 });
+  } else {
+    s = n.toLocaleString("de-DE");
+  }
+  return cur ? `${s} ${cur}` : s;
 }
 
-function formatPct(n) {
-  if (n === null || n === undefined) return "–";
-  return (n * 100).toFixed(1) + "%";
+function fmtPct(n, digits = 1) {
+  if (n === null || n === undefined || isNaN(n)) return "–";
+  return (Number(n) * 100).toFixed(digits) + "%";
+}
+
+function fmtX(n, digits = 1) {
+  if (n === null || n === undefined || isNaN(n)) return "–";
+  return Number(n).toFixed(digits) + "x";
 }
