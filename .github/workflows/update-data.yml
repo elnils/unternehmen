@@ -1,0 +1,132 @@
+name: Update Market Data & Deploy
+
+on:
+  # ── Täglich 7:00 und 18:00 UTC ──────────────────────────────
+  schedule:
+    - cron: "0 7 * * 1-5"    # Mo-Fr 7:00 UTC (Börsenöffnung EU)
+    - cron: "0 17 * * 1-5"   # Mo-Fr 17:00 UTC (Börsenöffnung USA)
+    - cron: "0 7 * * 6"      # Sa 7:00 UTC (Wochendaten)
+  # ── Manuell auslösbar ────────────────────────────────────────
+  workflow_dispatch:
+    inputs:
+      force_full_refresh:
+        description: "Alle Daten neu laden (inkl. History/Wiki)"
+        required: false
+        default: "false"
+        type: boolean
+  # ── Bei jedem Push auf main ───────────────────────────────────
+  push:
+    branches: [main]
+    paths-ignore:
+      - "data/market_data.json"   # Eigene Commits nicht re-triggern
+      - "data/fetch_log.json"
+      - "**.md"
+
+permissions:
+  contents: write          # für git push
+  pages: write             # für GitHub Pages
+  id-token: write
+
+concurrency:
+  group: "pages-deploy"
+  cancel-in-progress: false
+
+jobs:
+  # ──────────────────────────────────────────────────────────────
+  # JOB 1: Marktdaten abrufen
+  # ──────────────────────────────────────────────────────────────
+  fetch-data:
+    name: 📊 Marktdaten abrufen
+    runs-on: ubuntu-latest
+    outputs:
+      data_changed: ${{ steps.check.outputs.changed }}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 1
+
+      - name: Python 3.11 einrichten
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Abhängigkeiten installieren
+        run: |
+          pip install requests feedparser --quiet
+
+      - name: Marktdaten abrufen
+        run: |
+          python scripts/fetch_data.py
+        env:
+          PYTHONUNBUFFERED: "1"
+
+      - name: Prüfen ob Daten geändert
+        id: check
+        run: |
+          git diff --quiet data/market_data.json && echo "changed=false" >> $GITHUB_OUTPUT || echo "changed=true" >> $GITHUB_OUTPUT
+
+      - name: Daten committen
+        if: steps.check.outputs.changed == 'true'
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Actions [Data Updater]"
+          git add data/market_data.json data/fetch_log.json
+          TIMESTAMP=$(date -u '+%Y-%m-%d %H:%M UTC')
+          QUOTE_COUNT=$(python3 -c "
+          import json
+          d = json.load(open('data/market_data.json'))
+          n = sum(1 for v in d['data'].values() if v.get('quote'))
+          print(n)
+          " 2>/dev/null || echo "?")
+          git commit -m "📊 Marktdaten aktualisiert – ${TIMESTAMP} (${QUOTE_COUNT} Kurse)"
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Fetch-Zusammenfassung
+        run: |
+          python3 -c "
+          import json
+          from pathlib import Path
+          log = json.load(open('data/fetch_log.json'))
+          total = len(log['companies'])
+          ok = sum(1 for v in log['companies'].values() if v.get('quote') == 'ok')
+          err = sum(1 for v in log['companies'].values() if v.get('quote') == 'err')
+          print(f'Fetched: {total} companies | Quotes OK: {ok} | Errors: {err}')
+          " 2>/dev/null || echo "Log nicht lesbar"
+
+  # ──────────────────────────────────────────────────────────────
+  # JOB 2: GitHub Pages deployen
+  # ──────────────────────────────────────────────────────────────
+  deploy-pages:
+    name: 🚀 GitHub Pages deployen
+    needs: fetch-data
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Checkout (nach Data-Commit)
+        uses: actions/checkout@v4
+        with:
+          ref: main      # aktuellsten Stand holen (inkl. frischer Daten)
+
+      - name: GitHub Pages konfigurieren
+        uses: actions/configure-pages@v4
+
+      - name: Artefakt hochladen
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: "."      # komplettes Repo als Pages-Quelle
+
+      - name: Auf GitHub Pages deployen
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+      - name: 🎉 Deployment-URL ausgeben
+        run: echo "Deployed to ${{ steps.deployment.outputs.page_url }}"
