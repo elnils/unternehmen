@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="de" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Company Profiles – STOXX 600 · S&P 500 · DAX</title>
+<link rel="stylesheet" href="css/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>">
+</head>
+<body>
+<div id="app">
+
+  <!-- Top Bar -->
+  <header id="topbar">
+    <div class="topbar-inner">
+      <div class="logo">Company<span>Profiles</span></div>
+      <div id="search-wrap">
+        <svg id="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+        </svg>
+        <input id="search" type="search" placeholder="Unternehmen suchen… (Name, Ticker, ISIN)" autocomplete="off">
+      </div>
+      <div class="topbar-controls">
+        <button class="lang-btn active" id="lang-de" onclick="setLang('de')">DE</button>
+        <button class="lang-btn" id="lang-en" onclick="setLang('en')">EN</button>
+        <button class="btn-icon" onclick="toggleTheme()" title="Dark/Light Mode">🌓</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Filter Bar -->
+  <div id="filterbar">
+    <div class="filter-inner">
+      <span class="filter-label" id="lbl-index">Index</span>
+      <button class="filter-chip active" data-filter="index" data-value="">Alle</button>
+      <button class="filter-chip" data-filter="index" data-value="DAX">DAX 40</button>
+      <button class="filter-chip" data-filter="index" data-value="STOXX600">STOXX 600</button>
+      <button class="filter-chip" data-filter="index" data-value="SP500">S&P 500</button>
+      <button class="filter-chip" data-filter="index" data-value="EU">EU</button>
+      <div class="filter-divider"></div>
+      <span class="filter-label" id="lbl-sector">Branche</span>
+      <button class="filter-chip active" data-filter="sector" data-value="">Alle</button>
+      <button class="filter-chip" data-filter="sector" data-value="Technology">Tech</button>
+      <button class="filter-chip" data-filter="sector" data-value="Financials">Finanzen</button>
+      <button class="filter-chip" data-filter="sector" data-value="Healthcare">Healthcare</button>
+      <button class="filter-chip" data-filter="sector" data-value="Consumer">Konsumgüter</button>
+      <button class="filter-chip" data-filter="sector" data-value="Industrials">Industrie</button>
+      <button class="filter-chip" data-filter="sector" data-value="Automotive">Auto</button>
+      <button class="filter-chip" data-filter="sector" data-value="Energy">Energie</button>
+      <button class="filter-chip" data-filter="sector" data-value="Utilities">Versorger</button>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <main id="main">
+    <div class="results-header">
+      <span id="results-count" class="results-count"></span>
+    </div>
+    <div id="company-grid"></div>
+    <div id="empty-state" class="empty-state" style="display:none">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+      </svg>
+      <p id="empty-msg">Keine Unternehmen gefunden.</p>
+    </div>
+  </main>
+
+  <!-- Detail Overlay -->
+  <div id="detail-overlay" onclick="handleOverlayClick(event)">
+    <div id="detail-panel">
+      <!-- Populated by JS -->
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast"></div>
+
+</div><!-- /app -->
+
+<script src="data/companies.js"></script>
+<script src="js/cache.js"></script>
+<script src="js/api.js"></script>
+<script src="js/export.js"></script>
+<script>
+// ── State ─────────────────────────────────────────────────────
+let lang = localStorage.getItem("lang") || "de";
+let theme = localStorage.getItem("theme") || "light";
+let filterIndex = "";
+let filterSector = "";
+let searchQ = "";
+let currentCompany = null;
+let detailData = {};
+
+// i18n strings
+const I18N = {
+  de: {
+    searchPlaceholder: "Unternehmen suchen… (Name, Ticker)",
+    lblIndex: "Index", lblSector: "Branche",
+    results: (n) => `${n} Unternehmen`,
+    empty: "Keine Unternehmen gefunden.",
+    tabOverview: "Übersicht", tabKennzahlen: "Kennzahlen",
+    tabNews: "News", tabBerichte: "Berichte",
+    price: "Aktienkurs", change: "Veränderung", high52: "52W-Hoch", low52: "52W-Tief",
+    mktcap: "Marktkapitalisierung", currency: "Währung", exchange: "Börse",
+    revenue: "Umsatz", netincome: "Nettogewinn", margin: "Op. Marge",
+    eps: "Gewinn je Aktie", pe: "KGV", pb: "KBV",
+    roe: "EK-Rendite", div: "Dividende", fcf: "Free Cashflow",
+    debtEq: "Verschuldungsgrad", beta: "Beta", shares: "Aktien ausstehend",
+    analysts: "Analystenurteil", target: "Kursziel ⌀",
+    founded: "Gegründet", employees: "Mitarbeiter", website: "Website",
+    isin: "ISIN", lei: "LEI",
+    aboutTitle: "Über das Unternehmen",
+    wikiSource: "Quelle: Wikipedia",
+    wikiCopy: "Klicken zum Kopieren",
+    noNews: "Keine Nachrichten gefunden.",
+    loadingNews: "Lade Nachrichten…",
+    loadingQuote: "Lade Kursdaten…",
+    loadingWiki: "Lade Wikipedia…",
+    copyMd: "📋 Markdown",
+    copyPdf: "🖨️ PDF",
+    copyDocx: "📄 Word",
+    copied: "Kopiert!",
+    updated: "Aktualisiert",
+    reports: "Geschäftsberichte & IR",
+    reportsDesc: "Links zu Investor Relations, Geschäftsberichten und Regulatorik:",
+    noQuote: "Kursdaten nicht verfügbar",
+    analystsLabel: { strongBuy:"Kaufen", buy:"Kaufen", hold:"Halten", sell:"Verkaufen", strongSell:"Verkaufen" }
+  },
+  en: {
+    searchPlaceholder: "Search companies… (Name, Ticker)",
+    lblIndex: "Index", lblSector: "Sector",
+    results: (n) => `${n} companies`,
+    empty: "No companies found.",
+    tabOverview: "Overview", tabKennzahlen: "Financials",
+    tabNews: "News", tabBerichte: "Reports",
+    price: "Share Price", change: "Change", high52: "52W High", low52: "52W Low",
+    mktcap: "Market Cap", currency: "Currency", exchange: "Exchange",
+    revenue: "Revenue", netincome: "Net Income", margin: "Op. Margin",
+    eps: "EPS", pe: "P/E Ratio", pb: "P/B Ratio",
+    roe: "Return on Equity", div: "Dividend Yield", fcf: "Free Cash Flow",
+    debtEq: "Debt/Equity", beta: "Beta", shares: "Shares Outstanding",
+    analysts: "Analyst Rating", target: "Avg. Price Target",
+    founded: "Founded", employees: "Employees", website: "Website",
+    isin: "ISIN", lei: "LEI",
+    aboutTitle: "About the Company",
+    wikiSource: "Source: Wikipedia",
+    wikiCopy: "Click to copy",
+    noNews: "No news found.",
+    loadingNews: "Loading news…",
+    loadingQuote: "Loading quote data…",
+    loadingWiki: "Loading Wikipedia…",
+    copyMd: "📋 Markdown",
+    copyPdf: "🖨️ PDF",
+    copyDocx: "📄 Word",
+    copied: "Copied!",
+    updated: "Updated",
+    reports: "Annual Reports & IR",
+    reportsDesc: "Links to investor relations, annual reports and regulatory filings:",
+    noQuote: "Quote data unavailable",
+    analystsLabel: { strongBuy:"Strong Buy", buy:"Buy", hold:"Hold", sell:"Sell", strongSell:"Strong Sell" }
+  }
+};
+
+function t(key, ...args) {
+  const val = I18N[lang][key];
+  return typeof val === "function" ? val(...args) : (val ?? key);
+}
+
+// ── Init ──────────────────────────────────────────────────────
+document.addEventListener("DOMContentLoaded", () => {
+  applyTheme(); applyLang();
+  renderGrid();
+  document.getElementById("search").addEventListener("input", e => {
+    searchQ = e.target.value.toLowerCase().trim();
+    renderGrid();
+  });
+  document.querySelectorAll(".filter-chip").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const fType = btn.dataset.filter;
+      const fVal = btn.dataset.value;
+      document.querySelectorAll(`[data-filter="${fType}"]`).forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      if (fType === "index") filterIndex = fVal;
+      if (fType === "sector") filterSector = fVal;
+      renderGrid();
+    });
+  });
+  // Lazy-load quotes for visible cards
+  setTimeout(loadVisibleQuotes, 800);
+});
+
+// ── Grid Render ───────────────────────────────────────────────
+function renderGrid() {
+  const grid = document.getElementById("company-grid");
+  const empty = document.getElementById("empty-state");
+  const countEl = document.getElementById("results-count");
+  const filtered = COMPANIES.filter(c => {
+    if (filterIndex && !(c.index||[]).includes(filterIndex)) return false;
+    if (filterSector && c.sector !== filterSector) return false;
+    if (searchQ) {
+      const q = searchQ;
+      if (!c.name.toLowerCase().includes(q) &&
+          !c.ticker.toLowerCase().includes(q) &&
+          !(c.id||"").toLowerCase().includes(q) &&
+          !(c.country||"").toLowerCase().includes(q)) return false;
+    }
+    return true;
+  });
+  countEl.textContent = t("results", filtered.length);
+  if (!filtered.length) {
+    grid.innerHTML = ""; empty.style.display = ""; return;
+  }
+  empty.style.display = "none";
+  grid.innerHTML = filtered.map(c => cardHTML(c)).join("");
+  grid.querySelectorAll(".company-card").forEach(el => {
+    el.addEventListener("click", () => openDetail(el.dataset.id));
+  });
+  setTimeout(loadVisibleQuotes, 200);
+}
+
+function cardHTML(c) {
+  const flag = FLAGS[c.country] || "🏳️";
+  const icon = SECTOR_ICONS[c.sector] || "🏢";
+  const cacheKey = `quote_${c.ticker}`;
+  const cached = Cache.get(cacheKey);
+  let priceHTML = `<span class="card-price-loading"><span class="spinner" style="width:14px;height:14px"></span></span>`;
+  if (cached) priceHTML = quoteHTML(cached);
+  return `
+    <div class="company-card" data-id="${c.id}">
+      <div class="card-top">
+        <div class="card-flag">${flag}</div>
+        <div class="card-info">
+          <div class="card-name">${c.name}</div>
+          <div class="card-sub">${icon} ${c.sector} · ${c.country}</div>
+        </div>
+        <div class="card-ticker">${c.ticker}</div>
+      </div>
+      <div class="card-tags">
+        ${(c.index||[]).map(i=>`<span class="card-tag">${i}</span>`).join("")}
+      </div>
+      <div class="card-price-row" id="price-${c.id}">${priceHTML}</div>
+    </div>`;
+}
+
+function quoteHTML(q) {
+  if (!q) return `<span class="card-price-loading">–</span>`;
+  const sign = q.change >= 0 ? "+" : "";
+  const cls = q.change > 0 ? "pos" : q.change < 0 ? "neg" : "neu";
+  return `<span class="card-price">${q.price?.toFixed(2)} <small style="font-size:11px;font-weight:400">${q.currency||""}</small></span>
+    <span class="card-change ${cls}">${sign}${q.changePct}%</span>`;
+}
+
+// ── Load quotes lazily ────────────────────────────────────────
+async function loadVisibleQuotes() {
+  const grid = document.getElementById("company-grid");
+  const cards = grid.querySelectorAll(".company-card");
+  const batch = Array.from(cards).slice(0, 30); // load first 30
+  for (const card of batch) {
+    const id = card.dataset.id;
+    const company = COMPANY_MAP[id];
+    if (!company) continue;
+    const el = document.getElementById(`price-${id}`);
+    if (!el) continue;
+    const q = await API.getQuote(company.ticker);
+    if (el && q) el.innerHTML = quoteHTML(q);
+    else if (el) el.innerHTML = `<span class="card-price-loading">–</span>`;
+    await new Promise(r => setTimeout(r, 120)); // throttle
+  }
+}
+
+// ── Detail Panel ──────────────────────────────────────────────
+async function openDetail(id) {
+  const company = COMPANY_MAP[id];
+  if (!company) return;
+  currentCompany = company;
+  detailData = {};
+
+  const overlay = document.getElementById("detail-overlay");
+  const panel = document.getElementById("detail-panel");
+  overlay.classList.add("open");
+  document.body.style.overflow = "hidden";
+
+  const flag = FLAGS[company.country] || "🏳️";
+  const icon = SECTOR_ICONS[company.sector] || "🏢";
+
+  panel.innerHTML = `
+    <div class="detail-hero">
+      <button class="detail-close" onclick="closeDetail()">✕</button>
+      <div class="detail-hero-top">
+        <div class="detail-logo-wrap">${flag}</div>
+        <div class="detail-hero-info">
+          <div class="detail-name">${company.name}</div>
+          <div class="detail-desc" id="detail-desc">
+            <span class="skeleton" style="width:200px;height:14px;display:inline-block"></span>
+          </div>
+          <div class="detail-meta">
+            <span class="detail-badge">${company.ticker}</span>
+            <span class="detail-badge">${company.exchange}</span>
+            <span class="detail-badge">${icon} ${company.sector}</span>
+            ${(company.index||[]).map(i=>`<span class="detail-badge">${i}</span>`).join("")}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="export-bar">
+      <span>Export:</span>
+      <button class="btn-export" id="btn-md" onclick="doExport('md')">${t("copyMd")}</button>
+      <button class="btn-export" id="btn-pdf" onclick="doExport('pdf')">${t("copyPdf")}</button>
+      <button class="btn-export" id="btn-docx" onclick="doExport('docx')">${t("copyDocx")}</button>
+      <span class="cache-info" id="cache-info"></span>
+    </div>
+
+    <div class="detail-body">
+      <div class="detail-tabs">
+        <button class="detail-tab active" onclick="switchTab('overview',this)">${t("tabOverview")}</button>
+        <button class="detail-tab" onclick="switchTab('financials',this)">${t("tabKennzahlen")}</button>
+        <button class="detail-tab" onclick="switchTab('news',this)">${t("tabNews")}</button>
+        <button class="detail-tab" onclick="switchTab('reports',this)">${t("tabBerichte")}</button>
+      </div>
+
+      <!-- Overview Tab -->
+      <div class="tab-pane active" id="tab-overview">
+        <!-- Quote KPIs -->
+        <div class="kpi-grid" id="quote-kpis">
+          ${[1,2,3,4].map(()=>`<div class="kpi-card"><div class="skeleton" style="height:48px"></div></div>`).join("")}
+        </div>
+        <!-- Wikipedia -->
+        <div style="margin-top:20px">
+          <div class="section-title">📖 ${t("aboutTitle")}</div>
+          <div id="wiki-content">
+            <div class="loading-row"><span class="spinner"></span> ${t("loadingWiki")}</div>
+          </div>
+        </div>
+        <!-- Basic Facts -->
+        <div style="margin-top:20px" id="basic-facts-section"></div>
+      </div>
+
+      <!-- Financials Tab -->
+      <div class="tab-pane" id="tab-financials">
+        <div id="financials-content">
+          <div class="loading-row"><span class="spinner"></span> ${t("loadingQuote")}</div>
+        </div>
+      </div>
+
+      <!-- News Tab -->
+      <div class="tab-pane" id="tab-news">
+        <div id="news-content">
+          <div class="loading-row"><span class="spinner"></span> ${t("loadingNews")}</div>
+        </div>
+      </div>
+
+      <!-- Reports Tab -->
+      <div class="tab-pane" id="tab-reports">
+        <div style="margin-bottom:12px;font-size:13px;color:var(--c-text2)">${t("reportsDesc")}</div>
+        <div class="ir-links" id="ir-links"></div>
+      </div>
+    </div>
+  `;
+
+  // Render IR links immediately
+  const irLinks = API.getIRLinks(company);
+  document.getElementById("ir-links").innerHTML = irLinks.map(l =>
+    `<a class="ir-link" href="${l.url}" target="_blank" rel="noopener">🔗 ${l.label}</a>`
+  ).join("");
+
+  // Load all data in parallel
+  Promise.all([
+    API.getWikipedia(company.wikipedia, lang),
+    API.getQuote(company.ticker),
+    API.getFinancials(company.ticker),
+    API.getWikidata(company.wikidata),
+    API.getNews(company, lang)
+  ]).then(([wiki, quote, fin, wdata, news]) => {
+    detailData = { wiki, quote, fin, wdata, news };
+    renderDetailOverview(company, wiki, quote, wdata);
+    renderDetailFinancials(company, quote, fin);
+    renderDetailNews(company, news);
+    updateCacheInfo(company);
+  });
+}
+
+function renderDetailOverview(company, wiki, quote, wdata) {
+  const cur = quote?.currency || "";
+
+  // Update description
+  if (wiki?.description) {
+    document.getElementById("detail-desc").textContent = wiki.description;
+  } else {
+    document.getElementById("detail-desc").textContent = company.sector + " · " + company.country;
+  }
+
+  // Quote KPIs
+  const kpis = [
+    { label: t("price"), value: quote ? `${quote.price?.toFixed(2)} ${cur}` : "–", sub: quote ? `${quote.change >= 0 ? "+" : ""}${quote.changePct}%` : "" },
+    { label: t("mktcap"), value: quote?.marketCap ? formatNum(quote.marketCap, cur) : "–", sub: "" },
+    { label: t("high52"), value: quote ? `${quote.high52} ${cur}` : "–", sub: "" },
+    { label: t("low52"), value: quote ? `${quote.low52} ${cur}` : "–", sub: "" },
+  ];
+  document.getElementById("quote-kpis").innerHTML = kpis.map((k,i) =>
+    `<div class="kpi-card copy-field" onclick="copyKPI('${k.label}','${k.value}',this)" title="Klicken zum Kopieren">
+      <div class="kpi-label">${k.label}</div>
+      <div class="kpi-value">${k.value}</div>
+      ${k.sub ? `<div class="kpi-sub">${k.sub}</div>` : ""}
+    </div>`
+  ).join("");
+
+  // Wikipedia
+  const wikiEl = document.getElementById("wiki-content");
+  if (wiki?.extract) {
+    wikiEl.innerHTML = `
+      <div class="wiki-excerpt" onclick="copyWikiText('${escapeAttr(wiki.extract)}',this)">
+        ${wiki.extract}
+        <span class="wiki-copy-hint">📋 ${t("wikiCopy")} · <a href="${wiki.url}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${t("wikiSource")}</a></span>
+      </div>`;
+  } else {
+    wikiEl.innerHTML = `<p style="color:var(--c-text2);font-size:13px">Kein Wikipedia-Eintrag gefunden.</p>`;
+  }
+
+  // Basic facts table
+  const facts = [];
+  if (wdata?.founded) facts.push([t("founded"), wdata.founded]);
+  if (wdata?.employees) facts.push([t("employees"), Number(wdata.employees).toLocaleString("de-DE")]);
+  if (wdata?.isin) facts.push([t("isin"), wdata.isin]);
+  if (wdata?.lei) facts.push([t("lei"), wdata.lei]);
+  if (wdata?.website) facts.push([t("website"), `<a href="${wdata.website}" target="_blank" rel="noopener">${wdata.website}</a>`]);
+  facts.push([t("exchange"), `${company.exchange} (${company.country})`]);
+  facts.push(["Wikipedia", `<a href="https://en.wikipedia.org/wiki/${company.wikipedia}" target="_blank" rel="noopener">🔗 en.wikipedia.org</a>`]);
+
+  if (facts.length) {
+    document.getElementById("basic-facts-section").innerHTML = `
+      <div class="section-title">🏢 ${lang === "de" ? "Eckdaten" : "Key Facts"}</div>
+      <table class="data-table">
+        ${facts.map(([l,v]) => `
+          <tr class="copy-field" onclick="copyTableRow('${escapeAttr(l)}','${escapeAttr(v)}',this)">
+            <td>${l}</td><td>${v}</td>
+          </tr>`).join("")}
+      </table>`;
+  }
+}
+
+function renderDetailFinancials(company, quote, fin) {
+  const cur = quote?.currency || "";
+  const el = document.getElementById("financials-content");
+  if (!fin) { el.innerHTML = `<p style="color:var(--c-text2);font-size:13px">${t("noQuote")}</p>`; return; }
+
+  const rows = [
+    [t("revenue"), fin.revenue ? formatNum(fin.revenue, cur) : null],
+    [t("netincome"), fin.netIncome ? formatNum(fin.netIncome, cur) : null],
+    [t("margin"), fin.operatingMargin ? formatPct(fin.operatingMargin) : null],
+    [t("fcf"), fin.freeCashFlow ? formatNum(fin.freeCashFlow, cur) : null],
+    [t("eps"), fin.eps ? `${fin.eps.toFixed(2)} ${cur}` : null],
+    [t("pe"), fin.peRatio ? fin.peRatio.toFixed(1) : null],
+    [t("pb"), fin.pbRatio ? fin.pbRatio.toFixed(2) : null],
+    [t("roe"), fin.roe ? formatPct(fin.roe) : null],
+    [t("div"), fin.dividendYield ? formatPct(fin.dividendYield) : null],
+    [t("debtEq"), fin.debtToEquity ? fin.debtToEquity.toFixed(2) : null],
+    [t("beta"), fin.beta ? fin.beta.toFixed(2) : null],
+    [t("shares"), fin.sharesOutstanding ? formatNum(fin.sharesOutstanding) : null],
+    [t("analysts"), fin.analystRating ? (I18N[lang].analystsLabel[fin.analystRating] || fin.analystRating) : null],
+    [t("target"), fin.targetPrice ? `${fin.targetPrice.toFixed(2)} ${cur} (${fin.numAnalysts || "?"} ${lang === "de" ? "Analysten" : "analysts"})` : null],
+  ].filter(r => r[1] !== null);
+
+  el.innerHTML = `
+    <div class="section-title">💼 ${t("tabKennzahlen")} <small>${t("updated")}: ${new Date().toLocaleString("de-DE")}</small></div>
+    <table class="data-table">
+      ${rows.map(([l,v]) => `
+        <tr class="copy-field" onclick="copyTableRow('${escapeAttr(l)}','${escapeAttr(v)}',this)">
+          <td>${l}</td><td>${v}</td>
+        </tr>`).join("")}
+    </table>`;
+}
+
+function renderDetailNews(company, news) {
+  const el = document.getElementById("news-content");
+  if (!news || !news.length) {
+    el.innerHTML = `<p style="color:var(--c-text2);font-size:13px">${t("noNews")}</p>`;
+    return;
+  }
+  el.innerHTML = `<div class="news-list">
+    ${news.map(n => `
+      <a class="news-item" href="${n.link}" target="_blank" rel="noopener" style="display:block;text-decoration:none">
+        <div class="news-title">${n.title}</div>
+        <div class="news-meta">${n.date}${n.source ? " · " + n.source : ""}</div>
+        ${n.desc ? `<div class="news-desc">${n.desc}</div>` : ""}
+      </a>`).join("")}
+  </div>`;
+}
+
+function updateCacheInfo(company) {
+  const age = Cache.age(`quote_${company.ticker}`);
+  const el = document.getElementById("cache-info");
+  if (el && age) el.textContent = `⏱ ${t("updated")} ${age}`;
+}
+
+// ── Tab Switching ─────────────────────────────────────────────
+function switchTab(tabId, btn) {
+  document.querySelectorAll(".detail-tab").forEach(t => t.classList.remove("active"));
+  document.querySelectorAll(".tab-pane").forEach(p => p.classList.remove("active"));
+  btn.classList.add("active");
+  document.getElementById("tab-" + tabId)?.classList.add("active");
+}
+
+// ── Copy Actions ──────────────────────────────────────────────
+function copyKPI(label, value, el) {
+  navigator.clipboard.writeText(`${label}: ${value}`).then(() => showCopied(el));
+}
+
+function copyTableRow(label, value, tr) {
+  const cleanVal = value.replace(/<[^>]*>/g,"");
+  navigator.clipboard.writeText(`${label}: ${cleanVal}`).then(() => showCopied(tr));
+}
+
+function copyWikiText(text, el) {
+  navigator.clipboard.writeText(text).then(() => {
+    el.style.borderLeftColor = "var(--c-green)";
+    setTimeout(() => el.style.borderLeftColor = "", 1500);
+    showToast(t("copied"));
+  });
+}
+
+function showCopied(el) {
+  el.classList.add("copied");
+  showToast(t("copied"));
+  setTimeout(() => el.classList.remove("copied"), 1500);
+}
+
+function showToast(msg) {
+  const toast = document.getElementById("toast");
+  toast.textContent = msg;
+  toast.classList.add("show");
+  setTimeout(() => toast.classList.remove("show"), 1800);
+}
+
+// ── Export ────────────────────────────────────────────────────
+async function doExport(type) {
+  if (!currentCompany) return;
+  const { wiki, quote, fin } = detailData;
+  const btn = document.getElementById("btn-" + type);
+  const origText = btn.textContent;
+  btn.textContent = "⏳";
+  try {
+    if (type === "md") {
+      await Exporter.copyMarkdown(currentCompany, wiki, quote, fin, lang);
+      btn.textContent = "✅ " + t("copied");
+      btn.classList.add("success");
+    } else if (type === "pdf") {
+      Exporter.printPDF(currentCompany, wiki, quote, fin, lang);
+      btn.textContent = "✅";
+    } else if (type === "docx") {
+      await Exporter.exportDOCX(currentCompany, wiki, quote, fin, lang);
+      btn.textContent = "✅";
+    }
+  } catch(e) {
+    btn.textContent = "❌";
+    console.error(e);
+  }
+  setTimeout(() => { btn.textContent = origText; btn.classList.remove("success"); }, 2000);
+}
+
+// ── Close Detail ──────────────────────────────────────────────
+function closeDetail() {
+  document.getElementById("detail-overlay").classList.remove("open");
+  document.body.style.overflow = "";
+  currentCompany = null;
+}
+function handleOverlayClick(e) {
+  if (e.target === document.getElementById("detail-overlay")) closeDetail();
+}
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeDetail(); });
+
+// ── Lang / Theme ──────────────────────────────────────────────
+function setLang(l) {
+  lang = l;
+  localStorage.setItem("lang", l);
+  document.getElementById("lang-de").classList.toggle("active", l === "de");
+  document.getElementById("lang-en").classList.toggle("active", l === "en");
+  document.getElementById("search").placeholder = I18N[l].searchPlaceholder;
+  applyLang();
+  renderGrid();
+}
+
+function applyLang() {
+  document.documentElement.lang = lang;
+  document.getElementById("search").placeholder = I18N[lang].searchPlaceholder;
+}
+
+function toggleTheme() {
+  theme = theme === "light" ? "dark" : "light";
+  localStorage.setItem("theme", theme);
+  applyTheme();
+}
+function applyTheme() {
+  document.documentElement.setAttribute("data-theme", theme);
+}
+
+// ── Escape for attribute ──────────────────────────────────────
+function escapeAttr(s) {
+  if (!s) return "";
+  return String(s).replace(/'/g,"\\'").replace(/"/g,"&quot;").replace(/<[^>]*>/g,"").substring(0,500);
+}
+</script>
+</body>
+</html>
