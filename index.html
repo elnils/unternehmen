@@ -2,269 +2,350 @@
 <html lang="de" data-theme="light">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Company Profiles – STOXX 600 · S&P 500 · DAX</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Company Profiles – DAX · MDAX · SDAX · Dow30 · EuroStoxx50 · Nasdaq100 · S&P 500</title>
 <link rel="stylesheet" href="css/style.css">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 </head>
 <body>
 <div id="app">
 
-  <!-- Top Bar -->
-  <header id="topbar">
-    <div class="topbar-inner">
-      <div class="logo">Company<span>Profiles</span></div>
-      <div id="search-wrap">
-        <svg id="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-        </svg>
-        <input id="search" type="search" placeholder="Unternehmen suchen… (Name, Ticker, ISIN)" autocomplete="off">
-      </div>
-      <div class="topbar-controls">
-        <button class="lang-btn active" id="lang-de" onclick="setLang('de')">DE</button>
-        <button class="lang-btn" id="lang-en" onclick="setLang('en')">EN</button>
-        <button class="btn-icon" onclick="toggleTheme()" title="Dark/Light Mode">🌓</button>
-      </div>
+<!-- ── TOP BAR ──────────────────────────────────────────────── -->
+<header id="topbar">
+  <div class="tb-inner">
+    <div class="logo">Company<em>Profiles</em></div>
+    <div id="search-wrap">
+      <svg id="search-ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input id="search" type="search" placeholder="Unternehmen, Ticker, Land…" autocomplete="off">
     </div>
-  </header>
+    <div class="tb-controls">
+      <button class="btn-sm active" id="l-de" onclick="setLang('de')">DE</button>
+      <button class="btn-sm" id="l-en" onclick="setLang('en')">EN</button>
+      <button class="btn-icon" onclick="toggleTheme()" title="Theme">🌓</button>
+    </div>
+  </div>
+</header>
 
-  <!-- Filter Bar -->
-  <div id="filterbar">
-    <div class="filter-inner">
-      <span class="filter-label" id="lbl-index">Index</span>
-      <button class="filter-chip active" data-filter="index" data-value="">Alle</button>
-      <button class="filter-chip" data-filter="index" data-value="DAX">DAX 40</button>
-      <button class="filter-chip" data-filter="index" data-value="STOXX600">STOXX 600</button>
-      <button class="filter-chip" data-filter="index" data-value="SP500">S&P 500</button>
-      <button class="filter-chip" data-filter="index" data-value="EU">EU</button>
-      <div class="filter-divider"></div>
-      <span class="filter-label" id="lbl-sector">Branche</span>
-      <button class="filter-chip active" data-filter="sector" data-value="">Alle</button>
-      <button class="filter-chip" data-filter="sector" data-value="Technology">Tech</button>
-      <button class="filter-chip" data-filter="sector" data-value="Financials">Finanzen</button>
-      <button class="filter-chip" data-filter="sector" data-value="Healthcare">Healthcare</button>
-      <button class="filter-chip" data-filter="sector" data-value="Consumer">Konsumgüter</button>
-      <button class="filter-chip" data-filter="sector" data-value="Industrials">Industrie</button>
-      <button class="filter-chip" data-filter="sector" data-value="Automotive">Auto</button>
-      <button class="filter-chip" data-filter="sector" data-value="Energy">Energie</button>
-      <button class="filter-chip" data-filter="sector" data-value="Utilities">Versorger</button>
+<!-- ── FILTER BAR ───────────────────────────────────────────── -->
+<div id="filterbar">
+  <div class="fb-inner">
+    <span class="fb-label">Index</span>
+    <button class="chip active" data-f="index" data-v="">Alle</button>
+    <button class="chip" data-f="index" data-v="DAX">DAX 40</button>
+    <button class="chip" data-f="index" data-v="MDAX">MDAX</button>
+    <button class="chip" data-f="index" data-v="SDAX">SDAX</button>
+    <button class="chip" data-f="index" data-v="EuroStoxx50">EURO STOXX 50</button>
+    <button class="chip" data-f="index" data-v="Dow30">Dow Jones 30</button>
+    <button class="chip" data-f="index" data-v="Nasdaq100">NASDAQ 100</button>
+    <button class="chip" data-f="index" data-v="SP500">S&P 500</button>
+    <button class="chip" data-f="index" data-v="Unlisted">Nicht gelistet</button>
+    <div class="fb-sep"></div>
+    <span class="fb-label">Land</span>
+    <button class="chip active" data-f="country" data-v="">Alle</button>
+    <button class="chip" data-f="country" data-v="DE">🇩🇪 DE</button>
+    <button class="chip" data-f="country" data-v="US">🇺🇸 US</button>
+    <button class="chip" data-f="country" data-v="FR">🇫🇷 FR</button>
+    <button class="chip" data-f="country" data-v="NL">🇳🇱 NL</button>
+    <button class="chip" data-f="country" data-v="GB">🇬🇧 GB</button>
+    <button class="chip" data-f="country" data-v="CH">🇨🇭 CH</button>
+    <button class="chip" data-f="country" data-v="CN">🇨🇳 CN</button>
+    <button class="chip" data-f="country" data-v="IN">🇮🇳 IN</button>
+    <div class="fb-sep"></div>
+    <span class="fb-label">Branche</span>
+    <button class="chip active" data-f="sector" data-v="">Alle</button>
+    <button class="chip" data-f="sector" data-v="Aerospace &amp; Defense">🛡️ Defense</button>
+    <button class="chip" data-f="sector" data-v="Automotive">🚗 Auto</button>
+    <button class="chip" data-f="sector" data-v="Banking">🏦 Banking</button>
+    <button class="chip" data-f="sector" data-v="Software">🖥️ Software</button>
+    <button class="chip" data-f="sector" data-v="Semiconductors">🔬 Chips</button>
+    <button class="chip" data-f="sector" data-v="Pharmaceuticals">💊 Pharma</button>
+    <button class="chip" data-f="sector" data-v="Energy">⛽ Energie</button>
+    <button class="chip" data-f="sector" data-v="Utilities">⚡ Versorger</button>
+    <button class="chip" data-f="sector" data-v="Industrials">⚙️ Industrie</button>
+    <button class="chip" data-f="sector" data-v="Technology">💻 Tech</button>
+    <button class="chip" data-f="sector" data-v="Consumer Staples">🧴 Konsumgüter</button>
+    <button class="chip" data-f="sector" data-v="E-Commerce">🛒 E-Commerce</button>
+    <button class="chip" data-f="sector" data-v="Insurance">🛡 Versicherung</button>
+    <button class="chip" data-f="sector" data-v="Logistics">📦 Logistik</button>
+    <button class="chip" data-f="sector" data-v="Real Estate">🏢 Immobilien</button>
+    <div class="fb-sep"></div>
+    <span class="fb-label">Region</span>
+    <button class="chip active" data-f="region" data-v="">Alle</button>
+    <button class="chip" data-f="region" data-v="Europe">🇪🇺 Europa</button>
+    <button class="chip" data-f="region" data-v="Americas">🌎 Amerika</button>
+    <button class="chip" data-f="region" data-v="Asia-Pacific">🌏 Asien</button>
+    <button class="chip" data-f="region" data-v="Middle East">🕌 Naher Osten</button>
+    <button class="chip" data-f="region" data-v="Africa">🌍 Afrika</button>
+  </div>
+</div>
+
+<!-- ── MAIN ─────────────────────────────────────────────────── -->
+<main id="main">
+  <div class="results-bar">
+    <span id="rc" class="results-count"></span>
+  </div>
+  <div id="company-grid"></div>
+  <div id="empty" style="display:none;text-align:center;padding:60px 20px;color:var(--text3)">
+    <div style="font-size:32px;margin-bottom:8px">🔍</div>
+    <div id="empty-msg">Keine Unternehmen gefunden.</div>
+  </div>
+</main>
+
+<!-- ── DETAIL OVERLAY ───────────────────────────────────────── -->
+<div id="overlay" onclick="overlayClick(event)">
+ <div id="panel">
+
+  <!-- Hero -->
+  <div class="hero">
+    <button class="hero-close" onclick="closeDetail()">✕</button>
+    <div class="hero-top">
+      <div class="hero-icon" id="d-icon">🏢</div>
+      <div>
+        <div class="hero-name" id="d-name">–</div>
+        <div class="hero-desc" id="d-desc">–</div>
+        <div class="hero-badges" id="d-badges"></div>
+      </div>
     </div>
   </div>
 
-  <!-- Main -->
-  <main id="main">
-    <div class="results-header">
-      <span id="results-count" class="results-count"></span>
-    </div>
-    <div id="company-grid"></div>
-    <div id="empty-state" class="empty-state" style="display:none">
-      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-      </svg>
-      <p id="empty-msg">Keine Unternehmen gefunden.</p>
-    </div>
-  </main>
-
-  <!-- Detail Overlay -->
-  <div id="detail-overlay" onclick="handleOverlayClick(event)">
-    <div id="detail-panel">
-      <!-- Populated by JS -->
-    </div>
+  <!-- Export bar -->
+  <div class="export-bar">
+    <span class="lbl">Export:</span>
+    <button class="btn-exp" id="btn-md" onclick="doExport('md')">📋 Markdown</button>
+    <button class="btn-exp" id="btn-pdf" onclick="doExport('pdf')">🖨️ PDF</button>
+    <button class="btn-exp" id="btn-docx" onclick="doExport('docx')">📄 Word</button>
+    <span class="cache-age" id="d-cache"></span>
   </div>
 
-  <!-- Toast -->
-  <div id="toast"></div>
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab active" onclick="swTab('overview',this)">Übersicht</button>
+    <button class="tab" onclick="swTab('financials',this)">📊 Kennzahlen</button>
+    <button class="tab" onclick="swTab('chart',this)">📈 Kurschart</button>
+    <button class="tab" onclick="swTab('history',this)">📅 5-Jahres</button>
+    <button class="tab" onclick="swTab('ownership',this)">👥 Eigentümer</button>
+    <button class="tab" onclick="swTab('news',this)">📰 News</button>
+    <button class="tab" onclick="swTab('reports',this)">📄 Berichte</button>
+    <button class="tab" onclick="swTab('notes',this)">🖊️ Notizen</button>
+  </div>
+
+  <!-- Panel body -->
+  <div class="panel-body">
+
+    <!-- ── OVERVIEW TAB ── -->
+    <div class="pane active" id="tab-overview">
+      <!-- KPI row -->
+      <div class="kpi-grid" id="d-kpis" style="margin-bottom:16px">
+        <div class="kpi"><div class="skeleton" style="height:46px;width:100%"></div></div>
+        <div class="kpi"><div class="skeleton" style="height:46px;width:100%"></div></div>
+        <div class="kpi"><div class="skeleton" style="height:46px;width:100%"></div></div>
+        <div class="kpi"><div class="skeleton" style="height:46px;width:100%"></div></div>
+      </div>
+
+      <!-- Two-column: facts + ecosystem -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px" id="d-2col">
+        <div>
+          <div class="sec-title">🏢 Stammdaten</div>
+          <table class="dtable" id="d-facts"></table>
+        </div>
+        <div>
+          <div class="sec-title">🌐 Handelszonen & Ökosystem</div>
+          <div id="d-eco"></div>
+        </div>
+      </div>
+
+      <!-- Management -->
+      <div style="margin-top:16px">
+        <div class="sec-title">👤 Management</div>
+        <div id="d-mgmt"><div style="color:var(--text3);font-size:13px">Wird geladen…</div></div>
+      </div>
+
+      <!-- Competitors -->
+      <div style="margin-top:16px">
+        <div class="sec-title">🔁 Wettbewerber</div>
+        <div id="d-comps" class="comp-chips"></div>
+      </div>
+
+      <!-- Wikipedia -->
+      <div style="margin-top:16px">
+        <div class="sec-title">📖 Über das Unternehmen <small id="d-wiki-src"></small></div>
+        <div id="d-wiki"><div style="color:var(--text3);font-size:13px">Wird geladen…</div></div>
+      </div>
+    </div>
+
+    <!-- ── FINANCIALS TAB ── -->
+    <div class="pane" id="tab-financials">
+      <div id="d-fin-content"><div style="display:flex;align-items:center;gap:8px;color:var(--text3)"><span class="spin"></span> Lade Kennzahlen…</div></div>
+    </div>
+
+    <!-- ── CHART TAB ── -->
+    <div class="pane" id="tab-chart">
+      <div class="sec-title">📈 Kursentwicklung – 12 Monate <small id="d-chart-cur"></small></div>
+      <div class="chart-wrap" id="price-chart-wrap"><canvas id="price-chart"></canvas></div>
+      <div id="d-chart-msg" style="font-size:12px;color:var(--text3);margin-top:8px"></div>
+    </div>
+
+    <!-- ── 5-YEAR HISTORY TAB ── -->
+    <div class="pane" id="tab-history">
+      <div class="sec-title">📅 Umsatz / EBIT / Nettogewinn (5 Jahre)</div>
+      <div class="chart-wrap" id="annual-chart-wrap"><canvas id="annual-chart"></canvas></div>
+      <div style="margin-top:20px">
+        <div class="sec-title">📊 Nettogewinn nach Quartalen</div>
+        <div class="chart-wrap" id="quarterly-chart-wrap"><canvas id="quarterly-chart"></canvas></div>
+      </div>
+      <div style="margin-top:16px">
+        <div class="sec-title">📋 Detailtabelle</div>
+        <div id="d-history-table"></div>
+      </div>
+    </div>
+
+    <!-- ── OWNERSHIP TAB ── -->
+    <div class="pane" id="tab-ownership">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+        <div>
+          <div class="sec-title">👥 Eigentümerstruktur</div>
+          <div class="chart-wrap" id="ownership-chart-wrap"><canvas id="ownership-chart"></canvas></div>
+        </div>
+        <div>
+          <div class="sec-title">🏛️ Top Institutionelle Investoren</div>
+          <div id="d-investors"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── NEWS TAB ── -->
+    <div class="pane" id="tab-news">
+      <div class="sec-title">📰 Aktuelle Nachrichten</div>
+      <div id="d-news"><div style="display:flex;align-items:center;gap:8px;color:var(--text3)"><span class="spin"></span> Lade Nachrichten…</div></div>
+    </div>
+
+    <!-- ── REPORTS TAB ── -->
+    <div class="pane" id="tab-reports">
+      <div class="sec-title">📄 Geschäftsberichte & Investor Relations</div>
+      <div id="d-reports" class="ir-grid"></div>
+    </div>
+
+    <!-- ── NOTES TAB ── -->
+    <div class="pane" id="tab-notes">
+      <div class="sec-title">🖊️ Eigene Notizen <small>werden beim Export eingebettet, nicht gespeichert</small></div>
+      <textarea id="notes-area" placeholder="Hier können Sie persönliche Notizen, Beobachtungen oder Ergänzungen eintragen. Diese werden beim Export (Markdown / PDF / Word) eingebettet, aber nicht langfristig gespeichert."></textarea>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button class="btn-exp" onclick="doExport('md')">📋 Mit Notizen kopieren (Markdown)</button>
+        <button class="btn-exp" onclick="doExport('pdf')">🖨️ Als PDF drucken</button>
+        <button class="btn-exp" onclick="doExport('docx')">📄 Als Word exportieren</button>
+      </div>
+    </div>
+
+  </div><!-- /panel-body -->
+ </div><!-- /panel -->
+</div><!-- /overlay -->
+
+<div id="toast"></div>
 
 </div><!-- /app -->
 
+<!-- Scripts -->
 <script src="data/companies.js"></script>
 <script src="js/cache.js"></script>
 <script src="js/api.js"></script>
+<script src="js/charts.js"></script>
 <script src="js/export.js"></script>
 <script>
 // ── State ─────────────────────────────────────────────────────
-let lang = localStorage.getItem("lang") || "de";
-let theme = localStorage.getItem("theme") || "light";
-let filterIndex = "";
-let filterSector = "";
-let searchQ = "";
-let currentCompany = null;
-let detailData = {};
-
-// i18n strings
-const I18N = {
-  de: {
-    searchPlaceholder: "Unternehmen suchen… (Name, Ticker)",
-    lblIndex: "Index", lblSector: "Branche",
-    results: (n) => `${n} Unternehmen`,
-    empty: "Keine Unternehmen gefunden.",
-    tabOverview: "Übersicht", tabKennzahlen: "Kennzahlen",
-    tabNews: "News", tabBerichte: "Berichte",
-    price: "Aktienkurs", change: "Veränderung", high52: "52W-Hoch", low52: "52W-Tief",
-    mktcap: "Marktkapitalisierung", currency: "Währung", exchange: "Börse",
-    revenue: "Umsatz", netincome: "Nettogewinn", margin: "Op. Marge",
-    eps: "Gewinn je Aktie", pe: "KGV", pb: "KBV",
-    roe: "EK-Rendite", div: "Dividende", fcf: "Free Cashflow",
-    debtEq: "Verschuldungsgrad", beta: "Beta", shares: "Aktien ausstehend",
-    analysts: "Analystenurteil", target: "Kursziel ⌀",
-    founded: "Gegründet", employees: "Mitarbeiter", website: "Website",
-    isin: "ISIN", lei: "LEI",
-    aboutTitle: "Über das Unternehmen",
-    wikiSource: "Quelle: Wikipedia",
-    wikiCopy: "Klicken zum Kopieren",
-    noNews: "Keine Nachrichten gefunden.",
-    loadingNews: "Lade Nachrichten…",
-    loadingQuote: "Lade Kursdaten…",
-    loadingWiki: "Lade Wikipedia…",
-    copyMd: "📋 Markdown",
-    copyPdf: "🖨️ PDF",
-    copyDocx: "📄 Word",
-    copied: "Kopiert!",
-    updated: "Aktualisiert",
-    reports: "Geschäftsberichte & IR",
-    reportsDesc: "Links zu Investor Relations, Geschäftsberichten und Regulatorik:",
-    noQuote: "Kursdaten nicht verfügbar",
-    analystsLabel: { strongBuy:"Kaufen", buy:"Kaufen", hold:"Halten", sell:"Verkaufen", strongSell:"Verkaufen" }
-  },
-  en: {
-    searchPlaceholder: "Search companies… (Name, Ticker)",
-    lblIndex: "Index", lblSector: "Sector",
-    results: (n) => `${n} companies`,
-    empty: "No companies found.",
-    tabOverview: "Overview", tabKennzahlen: "Financials",
-    tabNews: "News", tabBerichte: "Reports",
-    price: "Share Price", change: "Change", high52: "52W High", low52: "52W Low",
-    mktcap: "Market Cap", currency: "Currency", exchange: "Exchange",
-    revenue: "Revenue", netincome: "Net Income", margin: "Op. Margin",
-    eps: "EPS", pe: "P/E Ratio", pb: "P/B Ratio",
-    roe: "Return on Equity", div: "Dividend Yield", fcf: "Free Cash Flow",
-    debtEq: "Debt/Equity", beta: "Beta", shares: "Shares Outstanding",
-    analysts: "Analyst Rating", target: "Avg. Price Target",
-    founded: "Founded", employees: "Employees", website: "Website",
-    isin: "ISIN", lei: "LEI",
-    aboutTitle: "About the Company",
-    wikiSource: "Source: Wikipedia",
-    wikiCopy: "Click to copy",
-    noNews: "No news found.",
-    loadingNews: "Loading news…",
-    loadingQuote: "Loading quote data…",
-    loadingWiki: "Loading Wikipedia…",
-    copyMd: "📋 Markdown",
-    copyPdf: "🖨️ PDF",
-    copyDocx: "📄 Word",
-    copied: "Copied!",
-    updated: "Updated",
-    reports: "Annual Reports & IR",
-    reportsDesc: "Links to investor relations, annual reports and regulatory filings:",
-    noQuote: "Quote data unavailable",
-    analystsLabel: { strongBuy:"Strong Buy", buy:"Buy", hold:"Hold", sell:"Sell", strongSell:"Strong Sell" }
-  }
-};
-
-function t(key, ...args) {
-  const val = I18N[lang][key];
-  return typeof val === "function" ? val(...args) : (val ?? key);
-}
+let lang = localStorage.getItem("cp2_lang") || "de";
+let theme = localStorage.getItem("cp2_theme") || "light";
+let fIndex = "", fCountry = "", fSector = "", fRegion = "", fSearch = "";
+let current = null, detailData = {};
+let quoteLoadQueue = [];
 
 // ── Init ──────────────────────────────────────────────────────
 document.addEventListener("DOMContentLoaded", () => {
   applyTheme(); applyLang();
   renderGrid();
   document.getElementById("search").addEventListener("input", e => {
-    searchQ = e.target.value.toLowerCase().trim();
+    fSearch = e.target.value.toLowerCase().trim();
     renderGrid();
   });
-  document.querySelectorAll(".filter-chip").forEach(btn => {
-    btn.addEventListener("click", () => {
-      const fType = btn.dataset.filter;
-      const fVal = btn.dataset.value;
-      document.querySelectorAll(`[data-filter="${fType}"]`).forEach(b => b.classList.remove("active"));
-      btn.classList.add("active");
-      if (fType === "index") filterIndex = fVal;
-      if (fType === "sector") filterSector = fVal;
+  document.querySelectorAll(".chip").forEach(b => {
+    b.addEventListener("click", () => {
+      const f = b.dataset.f, v = b.dataset.v;
+      document.querySelectorAll(`[data-f="${f}"]`).forEach(x => x.classList.remove("active"));
+      b.classList.add("active");
+      if (f === "index") fIndex = v;
+      if (f === "country") fCountry = v;
+      if (f === "sector") fSector = v;
+      if (f === "region") fRegion = v;
       renderGrid();
     });
   });
-  // Lazy-load quotes for visible cards
-  setTimeout(loadVisibleQuotes, 800);
 });
 
-// ── Grid Render ───────────────────────────────────────────────
+// ── Grid ──────────────────────────────────────────────────────
 function renderGrid() {
   const grid = document.getElementById("company-grid");
-  const empty = document.getElementById("empty-state");
-  const countEl = document.getElementById("results-count");
-  const filtered = COMPANIES.filter(c => {
-    if (filterIndex && !(c.index||[]).includes(filterIndex)) return false;
-    if (filterSector && c.sector !== filterSector) return false;
-    if (searchQ) {
-      const q = searchQ;
-      if (!c.name.toLowerCase().includes(q) &&
-          !c.ticker.toLowerCase().includes(q) &&
-          !(c.id||"").toLowerCase().includes(q) &&
-          !(c.country||"").toLowerCase().includes(q)) return false;
+  const empty = document.getElementById("empty");
+  const rc = document.getElementById("rc");
+  const filtered = COMPANIES_CLEAN.filter(c => {
+    if (fIndex && !(c.index || []).includes(fIndex)) return false;
+    if (fCountry && c.country !== fCountry) return false;
+    if (fSector && c.sector !== fSector) return false;
+    if (fRegion && !(c.tradeRegions || []).includes(fRegion)) return false;
+    if (fSearch) {
+      const q = fSearch;
+      if (!c.name.toLowerCase().includes(q) && !c.ticker.toLowerCase().includes(q)
+        && !c.id.toLowerCase().includes(q) && !(c.country||"").toLowerCase().includes(q)
+        && !(c.hq||"").toLowerCase().includes(q) && !(c.sector||"").toLowerCase().includes(q)) return false;
     }
     return true;
   });
-  countEl.textContent = t("results", filtered.length);
-  if (!filtered.length) {
-    grid.innerHTML = ""; empty.style.display = ""; return;
-  }
+  rc.textContent = `${filtered.length} Unternehmen`;
+  if (!filtered.length) { grid.innerHTML = ""; empty.style.display = ""; return; }
   empty.style.display = "none";
   grid.innerHTML = filtered.map(c => cardHTML(c)).join("");
-  grid.querySelectorAll(".company-card").forEach(el => {
-    el.addEventListener("click", () => openDetail(el.dataset.id));
-  });
-  setTimeout(loadVisibleQuotes, 200);
+  grid.querySelectorAll(".card").forEach(el => el.addEventListener("click", () => openDetail(el.dataset.id)));
+  setTimeout(() => loadBatchQuotes(filtered.slice(0, 40)), 300);
 }
 
 function cardHTML(c) {
   const flag = FLAGS[c.country] || "🏳️";
   const icon = SECTOR_ICONS[c.sector] || "🏢";
-  const cacheKey = `quote_${c.ticker}`;
-  const cached = Cache.get(cacheKey);
-  let priceHTML = `<span class="card-price-loading"><span class="spinner" style="width:14px;height:14px"></span></span>`;
-  if (cached) priceHTML = quoteHTML(cached);
-  return `
-    <div class="company-card" data-id="${c.id}">
-      <div class="card-top">
-        <div class="card-flag">${flag}</div>
-        <div class="card-info">
-          <div class="card-name">${c.name}</div>
-          <div class="card-sub">${icon} ${c.sector} · ${c.country}</div>
-        </div>
-        <div class="card-ticker">${c.ticker}</div>
+  const cached = Cache.get(`quote_${c.ticker}`);
+  const priceHTML = cached ? quotePriceHTML(cached) : `<span class="spin" style="width:14px;height:14px;border-width:1.5px"></span>`;
+  const unlistedBadge = c.unlisted ? `<span class="unlisted-badge">Nicht gelistet</span>` : `<span class="card-ticker">${c.ticker}</span>`;
+  return `<div class="card" data-id="${c.id}">
+    <div class="card-top">
+      <div class="card-flag">${flag}</div>
+      <div class="card-body">
+        <div class="card-name">${c.name}</div>
+        <div class="card-sub">${icon} ${c.sector} · ${c.hq || c.country}</div>
       </div>
-      <div class="card-tags">
-        ${(c.index||[]).map(i=>`<span class="card-tag">${i}</span>`).join("")}
-      </div>
-      <div class="card-price-row" id="price-${c.id}">${priceHTML}</div>
-    </div>`;
+      ${unlistedBadge}
+    </div>
+    <div class="card-tags">
+      ${(c.index||[]).map(i => `<span class="tag">${i}</span>`).join("")}
+      ${(c.tradeRegions||[]).slice(0,2).map(r => `<span class="tag">${TRADE_REGION_ICONS[r]||""} ${r}</span>`).join("")}
+    </div>
+    <div class="card-price-row" id="pr-${c.id}">${priceHTML}</div>
+  </div>`;
 }
 
-function quoteHTML(q) {
-  if (!q) return `<span class="card-price-loading">–</span>`;
+function quotePriceHTML(q) {
+  if (!q) return `<span style="color:var(--text3);font-size:12px">–</span>`;
   const sign = q.change >= 0 ? "+" : "";
   const cls = q.change > 0 ? "pos" : q.change < 0 ? "neg" : "neu";
-  return `<span class="card-price">${q.price?.toFixed(2)} <small style="font-size:11px;font-weight:400">${q.currency||""}</small></span>
-    <span class="card-change ${cls}">${sign}${q.changePct}%</span>`;
+  return `<span class="price-val">${q.price?.toFixed(2)} <small style="font-size:10px;font-weight:400">${q.currency||""}</small></span>
+    <span class="price-chg ${cls}">${sign}${q.changePct?.toFixed(2)}%</span>`;
 }
 
-// ── Load quotes lazily ────────────────────────────────────────
-async function loadVisibleQuotes() {
-  const grid = document.getElementById("company-grid");
-  const cards = grid.querySelectorAll(".company-card");
-  const batch = Array.from(cards).slice(0, 30); // load first 30
-  for (const card of batch) {
-    const id = card.dataset.id;
-    const company = COMPANY_MAP[id];
-    if (!company) continue;
-    const el = document.getElementById(`price-${id}`);
+async function loadBatchQuotes(companies) {
+  for (const c of companies) {
+    if (c.unlisted || !c.ticker || c.ticker === "-") continue;
+    const el = document.getElementById(`pr-${c.id}`);
     if (!el) continue;
-    const q = await API.getQuote(company.ticker);
-    if (el && q) el.innerHTML = quoteHTML(q);
-    else if (el) el.innerHTML = `<span class="card-price-loading">–</span>`;
-    await new Promise(r => setTimeout(r, 120)); // throttle
+    const q = await API.getQuote(c.ticker);
+    if (el && q) el.innerHTML = quotePriceHTML(q);
+    await new Promise(r => setTimeout(r, 80));
   }
 }
 
@@ -272,333 +353,382 @@ async function loadVisibleQuotes() {
 async function openDetail(id) {
   const company = COMPANY_MAP[id];
   if (!company) return;
-  currentCompany = company;
-  detailData = {};
+  current = company; detailData = {};
+  document.getElementById("notes-area").value = "";
 
-  const overlay = document.getElementById("detail-overlay");
-  const panel = document.getElementById("detail-panel");
+  const overlay = document.getElementById("overlay");
   overlay.classList.add("open");
   document.body.style.overflow = "hidden";
 
   const flag = FLAGS[company.country] || "🏳️";
   const icon = SECTOR_ICONS[company.sector] || "🏢";
 
-  panel.innerHTML = `
-    <div class="detail-hero">
-      <button class="detail-close" onclick="closeDetail()">✕</button>
-      <div class="detail-hero-top">
-        <div class="detail-logo-wrap">${flag}</div>
-        <div class="detail-hero-info">
-          <div class="detail-name">${company.name}</div>
-          <div class="detail-desc" id="detail-desc">
-            <span class="skeleton" style="width:200px;height:14px;display:inline-block"></span>
-          </div>
-          <div class="detail-meta">
-            <span class="detail-badge">${company.ticker}</span>
-            <span class="detail-badge">${company.exchange}</span>
-            <span class="detail-badge">${icon} ${company.sector}</span>
-            ${(company.index||[]).map(i=>`<span class="detail-badge">${i}</span>`).join("")}
-          </div>
-        </div>
-      </div>
-    </div>
+  // Hero
+  document.getElementById("d-icon").textContent = flag;
+  document.getElementById("d-name").textContent = company.name;
+  document.getElementById("d-desc").textContent = `${icon} ${company.sector} · ${company.hq || company.country}`;
+  document.getElementById("d-badges").innerHTML = [
+    `<span class="hero-badge">${company.ticker !== "-" ? company.ticker : "Nicht gelistet"}</span>`,
+    `<span class="hero-badge">${company.exchange}</span>`,
+    ...(company.index||[]).map(i => `<span class="hero-badge">${i}</span>`)
+  ].join("");
 
-    <div class="export-bar">
-      <span>Export:</span>
-      <button class="btn-export" id="btn-md" onclick="doExport('md')">${t("copyMd")}</button>
-      <button class="btn-export" id="btn-pdf" onclick="doExport('pdf')">${t("copyPdf")}</button>
-      <button class="btn-export" id="btn-docx" onclick="doExport('docx')">${t("copyDocx")}</button>
-      <span class="cache-info" id="cache-info"></span>
-    </div>
+  // Reset active tab
+  swTab("overview", document.querySelector(".tab"));
+  document.querySelectorAll(".tab")[0].click();
 
-    <div class="detail-body">
-      <div class="detail-tabs">
-        <button class="detail-tab active" onclick="switchTab('overview',this)">${t("tabOverview")}</button>
-        <button class="detail-tab" onclick="switchTab('financials',this)">${t("tabKennzahlen")}</button>
-        <button class="detail-tab" onclick="switchTab('news',this)">${t("tabNews")}</button>
-        <button class="detail-tab" onclick="switchTab('reports',this)">${t("tabBerichte")}</button>
-      </div>
+  // Render static stuff immediately
+  renderFacts(company);
+  renderEcosystem(company);
+  renderCompetitors(company);
+  renderReports(company);
 
-      <!-- Overview Tab -->
-      <div class="tab-pane active" id="tab-overview">
-        <!-- Quote KPIs -->
-        <div class="kpi-grid" id="quote-kpis">
-          ${[1,2,3,4].map(()=>`<div class="kpi-card"><div class="skeleton" style="height:48px"></div></div>`).join("")}
-        </div>
-        <!-- Wikipedia -->
-        <div style="margin-top:20px">
-          <div class="section-title">📖 ${t("aboutTitle")}</div>
-          <div id="wiki-content">
-            <div class="loading-row"><span class="spinner"></span> ${t("loadingWiki")}</div>
-          </div>
-        </div>
-        <!-- Basic Facts -->
-        <div style="margin-top:20px" id="basic-facts-section"></div>
-      </div>
-
-      <!-- Financials Tab -->
-      <div class="tab-pane" id="tab-financials">
-        <div id="financials-content">
-          <div class="loading-row"><span class="spinner"></span> ${t("loadingQuote")}</div>
-        </div>
-      </div>
-
-      <!-- News Tab -->
-      <div class="tab-pane" id="tab-news">
-        <div id="news-content">
-          <div class="loading-row"><span class="spinner"></span> ${t("loadingNews")}</div>
-        </div>
-      </div>
-
-      <!-- Reports Tab -->
-      <div class="tab-pane" id="tab-reports">
-        <div style="margin-bottom:12px;font-size:13px;color:var(--c-text2)">${t("reportsDesc")}</div>
-        <div class="ir-links" id="ir-links"></div>
-      </div>
-    </div>
-  `;
-
-  // Render IR links immediately
-  const irLinks = API.getIRLinks(company);
-  document.getElementById("ir-links").innerHTML = irLinks.map(l =>
-    `<a class="ir-link" href="${l.url}" target="_blank" rel="noopener">🔗 ${l.label}</a>`
-  ).join("");
-
-  // Load all data in parallel
-  Promise.all([
+  // Parallel fetch
+  const [wiki, quote, fin, wdata, news, mgmt, own] = await Promise.all([
     API.getWikipedia(company.wikipedia, lang),
     API.getQuote(company.ticker),
     API.getFinancials(company.ticker),
     API.getWikidata(company.wikidata),
-    API.getNews(company, lang)
-  ]).then(([wiki, quote, fin, wdata, news]) => {
-    detailData = { wiki, quote, fin, wdata, news };
-    renderDetailOverview(company, wiki, quote, wdata);
-    renderDetailFinancials(company, quote, fin);
-    renderDetailNews(company, news);
-    updateCacheInfo(company);
-  });
-}
+    API.getNews(company, lang),
+    API.getManagement(company.ticker),
+    API.getOwnership(company.ticker),
+  ]);
 
-function renderDetailOverview(company, wiki, quote, wdata) {
-  const cur = quote?.currency || "";
+  detailData = { wiki, quote, fin, wdata, news, mgmt, own };
 
-  // Update description
-  if (wiki?.description) {
-    document.getElementById("detail-desc").textContent = wiki.description;
-  } else {
-    document.getElementById("detail-desc").textContent = company.sector + " · " + company.country;
+  // Update description from Yahoo
+  if (mgmt?.description) {
+    document.getElementById("d-desc").textContent = mgmt.description.substring(0, 120) + "…";
   }
 
-  // Quote KPIs
+  renderKPIs(company, quote, fin);
+  renderWikiContent(wiki);
+  renderManagement(mgmt, company);
+  renderFinancials(company, quote, fin, mgmt);
+  renderChartTab(company, quote);
+  renderHistoryTab(company, fin);
+  renderOwnershipTab(own);
+  renderNews(news);
+  renderCacheAge(company);
+
+  // Update facts with live data
+  renderFacts(company, wdata, mgmt);
+}
+
+// ── Tabs ──────────────────────────────────────────────────────
+function swTab(id, btn) {
+  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+  document.querySelectorAll(".pane").forEach(p => p.classList.remove("active"));
+  btn.classList.add("active");
+  document.getElementById("tab-" + id)?.classList.add("active");
+}
+
+// ── Render helpers ─────────────────────────────────────────────
+function renderKPIs(company, quote, fin) {
+  const cur = quote?.currency || "";
+  const sign = v => v >= 0 ? "+" : "";
   const kpis = [
-    { label: t("price"), value: quote ? `${quote.price?.toFixed(2)} ${cur}` : "–", sub: quote ? `${quote.change >= 0 ? "+" : ""}${quote.changePct}%` : "" },
-    { label: t("mktcap"), value: quote?.marketCap ? formatNum(quote.marketCap, cur) : "–", sub: "" },
-    { label: t("high52"), value: quote ? `${quote.high52} ${cur}` : "–", sub: "" },
-    { label: t("low52"), value: quote ? `${quote.low52} ${cur}` : "–", sub: "" },
+    { label: "Kurs", val: quote ? `${quote.price?.toFixed(2)} ${cur}` : "–", sub: quote ? `${sign(quote.change)}${quote.changePct?.toFixed(2)}% heute` : "", color: quote ? (quote.change >= 0 ? "var(--green)" : "var(--red)") : "" },
+    { label: "Marktkapitalisierung", val: fin?.marketCap ? fmtNum(fin.marketCap, cur) : (quote ? "–" : "Nicht gelistet"), sub: "" },
+    { label: "52W Hoch", val: quote ? `${quote.high52} ${cur}` : "–", sub: "" },
+    { label: "52W Tief", val: quote ? `${quote.low52} ${cur}` : "–", sub: "" },
+    { label: "KGV (trailing)", val: fin?.peRatio ? fmtX(fin.peRatio) : "–", sub: fin?.peForward ? `Forward: ${fmtX(fin.peForward)}` : "" },
+    { label: "Dividende", val: fin?.dividendYield ? fmtPct(fin.dividendYield) : "–", sub: fin?.dividendRate ? `${fin.dividendRate?.toFixed(2)} ${cur}/Aktie` : "" },
   ];
-  document.getElementById("quote-kpis").innerHTML = kpis.map((k,i) =>
-    `<div class="kpi-card copy-field" onclick="copyKPI('${k.label}','${k.value}',this)" title="Klicken zum Kopieren">
+  document.getElementById("d-kpis").innerHTML = kpis.map((k, i) =>
+    `<div class="kpi" onclick="copyKPI('${esc(k.label)}','${esc(k.val)}',this)">
       <div class="kpi-label">${k.label}</div>
-      <div class="kpi-value">${k.value}</div>
+      <div class="kpi-val" style="${k.color ? `color:${k.color}` : ""}">${k.val}</div>
       ${k.sub ? `<div class="kpi-sub">${k.sub}</div>` : ""}
     </div>`
   ).join("");
-
-  // Wikipedia
-  const wikiEl = document.getElementById("wiki-content");
-  if (wiki?.extract) {
-    wikiEl.innerHTML = `
-      <div class="wiki-excerpt" onclick="copyWikiText('${escapeAttr(wiki.extract)}',this)">
-        ${wiki.extract}
-        <span class="wiki-copy-hint">📋 ${t("wikiCopy")} · <a href="${wiki.url}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${t("wikiSource")}</a></span>
-      </div>`;
-  } else {
-    wikiEl.innerHTML = `<p style="color:var(--c-text2);font-size:13px">Kein Wikipedia-Eintrag gefunden.</p>`;
-  }
-
-  // Basic facts table
-  const facts = [];
-  if (wdata?.founded) facts.push([t("founded"), wdata.founded]);
-  if (wdata?.employees) facts.push([t("employees"), Number(wdata.employees).toLocaleString("de-DE")]);
-  if (wdata?.isin) facts.push([t("isin"), wdata.isin]);
-  if (wdata?.lei) facts.push([t("lei"), wdata.lei]);
-  if (wdata?.website) facts.push([t("website"), `<a href="${wdata.website}" target="_blank" rel="noopener">${wdata.website}</a>`]);
-  facts.push([t("exchange"), `${company.exchange} (${company.country})`]);
-  facts.push(["Wikipedia", `<a href="https://en.wikipedia.org/wiki/${company.wikipedia}" target="_blank" rel="noopener">🔗 en.wikipedia.org</a>`]);
-
-  if (facts.length) {
-    document.getElementById("basic-facts-section").innerHTML = `
-      <div class="section-title">🏢 ${lang === "de" ? "Eckdaten" : "Key Facts"}</div>
-      <table class="data-table">
-        ${facts.map(([l,v]) => `
-          <tr class="copy-field" onclick="copyTableRow('${escapeAttr(l)}','${escapeAttr(v)}',this)">
-            <td>${l}</td><td>${v}</td>
-          </tr>`).join("")}
-      </table>`;
-  }
 }
 
-function renderDetailFinancials(company, quote, fin) {
-  const cur = quote?.currency || "";
-  const el = document.getElementById("financials-content");
-  if (!fin) { el.innerHTML = `<p style="color:var(--c-text2);font-size:13px">${t("noQuote")}</p>`; return; }
-
+function renderFacts(company, wdata, mgmt) {
   const rows = [
-    [t("revenue"), fin.revenue ? formatNum(fin.revenue, cur) : null],
-    [t("netincome"), fin.netIncome ? formatNum(fin.netIncome, cur) : null],
-    [t("margin"), fin.operatingMargin ? formatPct(fin.operatingMargin) : null],
-    [t("fcf"), fin.freeCashFlow ? formatNum(fin.freeCashFlow, cur) : null],
-    [t("eps"), fin.eps ? `${fin.eps.toFixed(2)} ${cur}` : null],
-    [t("pe"), fin.peRatio ? fin.peRatio.toFixed(1) : null],
-    [t("pb"), fin.pbRatio ? fin.pbRatio.toFixed(2) : null],
-    [t("roe"), fin.roe ? formatPct(fin.roe) : null],
-    [t("div"), fin.dividendYield ? formatPct(fin.dividendYield) : null],
-    [t("debtEq"), fin.debtToEquity ? fin.debtToEquity.toFixed(2) : null],
-    [t("beta"), fin.beta ? fin.beta.toFixed(2) : null],
-    [t("shares"), fin.sharesOutstanding ? formatNum(fin.sharesOutstanding) : null],
-    [t("analysts"), fin.analystRating ? (I18N[lang].analystsLabel[fin.analystRating] || fin.analystRating) : null],
-    [t("target"), fin.targetPrice ? `${fin.targetPrice.toFixed(2)} ${cur} (${fin.numAnalysts || "?"} ${lang === "de" ? "Analysten" : "analysts"})` : null],
-  ].filter(r => r[1] !== null);
-
-  el.innerHTML = `
-    <div class="section-title">💼 ${t("tabKennzahlen")} <small>${t("updated")}: ${new Date().toLocaleString("de-DE")}</small></div>
-    <table class="data-table">
-      ${rows.map(([l,v]) => `
-        <tr class="copy-field" onclick="copyTableRow('${escapeAttr(l)}','${escapeAttr(v)}',this)">
-          <td>${l}</td><td>${v}</td>
-        </tr>`).join("")}
-    </table>`;
+    ["Ticker", company.ticker !== "-" ? `${company.ticker} (${company.exchange})` : "Nicht gelistet"],
+    ["Hauptsitz", company.hq || company.country],
+    ["Land", `${FLAGS[company.country]||""} ${company.country}`],
+    ["Branche", company.sector],
+    ["Index", (company.index||[]).join(", ")],
+    ["Gegründet", wdata?.founded || company.founded || "–"],
+    ["Mitarbeiter (DE)", mgmt?.fullTimeEmployees ? Number(mgmt.fullTimeEmployees).toLocaleString("de-DE") : (company.employees ? Number(company.employees).toLocaleString("de-DE") : "–")],
+    ["Website", mgmt?.website ? `<a href="${mgmt.website}" target="_blank">${mgmt.website}</a>` : (wdata?.website ? `<a href="${wdata.website}" target="_blank">${wdata.website}</a>` : "–")],
+    ["ISIN", wdata?.isin || "–"],
+    ["LEI", wdata?.lei || "–"],
+    ["Wikipedia", `<a href="https://en.wikipedia.org/wiki/${company.wikipedia}" target="_blank">📖 ${company.wikipedia?.replace(/_/g," ")}</a>`],
+  ];
+  document.getElementById("d-facts").innerHTML = rows.map(([l, v]) =>
+    `<tr class="cf" onclick="copyTR('${esc(l)}','${esc(v)}',this)"><td>${l}</td><td>${v}</td></tr>`
+  ).join("");
 }
 
-function renderDetailNews(company, news) {
-  const el = document.getElementById("news-content");
-  if (!news || !news.length) {
-    el.innerHTML = `<p style="color:var(--c-text2);font-size:13px">${t("noNews")}</p>`;
+function renderEcosystem(company) {
+  const regions = (company.tradeRegions || []).map(r =>
+    `<span class="region-pill">${TRADE_REGION_ICONS[r]||""} ${r}</span>`
+  ).join("");
+  const sectors = `<div style="margin-top:10px"><span style="font-size:11px;font-weight:700;color:var(--text3)">BRANCHE</span><div style="margin-top:6px;font-size:14px">${SECTOR_ICONS[company.sector]||""} ${company.sector}</div></div>`;
+  const unlisted = company.unlisted ? `<div style="margin-top:10px;padding:8px 12px;background:var(--amber-bg);border-radius:var(--r-xs);font-size:12px;color:var(--amber)">⚠️ Nicht börsennotiert – Kursdaten nicht verfügbar. Finanzdaten ggf. aus öffentlichen Quellen.</div>` : "";
+  document.getElementById("d-eco").innerHTML = `<div><span style="font-size:11px;font-weight:700;color:var(--text3)">HANDELSZONEN</span><div style="margin-top:6px">${regions || "–"}</div></div>${sectors}${unlisted}`;
+}
+
+function renderCompetitors(company) {
+  const comps = (company.competitors || []).map(id => {
+    const c = COMPANY_MAP[id];
+    const label = c ? `${FLAGS[c.country]||""} ${c.name}` : id;
+    return `<button class="comp-chip" onclick="openDetail('${id}')" title="${label}">${label}</button>`;
+  }).join("");
+  document.getElementById("d-comps").innerHTML = comps || `<span style="color:var(--text3);font-size:13px">–</span>`;
+}
+
+function renderWikiContent(wiki) {
+  const el = document.getElementById("d-wiki");
+  const srcEl = document.getElementById("d-wiki-src");
+  if (wiki?.extract) {
+    el.innerHTML = `<div class="wiki-block" onclick="copyWiki('${esc(wiki.extract)}',this)">
+      ${wiki.extract}
+      <span class="wiki-hint">📋 Klicken zum Kopieren · <a href="${wiki.url}" target="_blank" onclick="event.stopPropagation()">Wikipedia öffnen</a></span>
+    </div>`;
+    if (srcEl) srcEl.textContent = `(${wiki.lang === "de" ? "Deutsch" : "Englisch"})`;
+  } else {
+    el.innerHTML = `<span style="color:var(--text3);font-size:13px">Kein Wikipedia-Eintrag gefunden.</span>`;
+  }
+}
+
+function renderManagement(mgmt, company) {
+  const el = document.getElementById("d-mgmt");
+  const officers = mgmt?.officers?.length ? mgmt.officers : [];
+  if (!officers.length) { el.innerHTML = `<span style="color:var(--text3);font-size:13px">Keine Management-Daten verfügbar.</span>`; return; }
+  el.innerHTML = `<div class="officers-list">${officers.map(o =>
+    `<div class="officer-row">
+      <span class="officer-title">${o.title || "–"}</span>
+      <span class="officer-name">${o.name || "–"}</span>
+      ${o.pay ? `<span class="officer-pay">${fmtNum(o.pay, "")} USD</span>` : ""}
+    </div>`
+  ).join("")}</div>`;
+}
+
+function renderFinancials(company, quote, fin, mgmt) {
+  const cur = quote?.currency || "";
+  const el = document.getElementById("d-fin-content");
+  if (!fin) { el.innerHTML = `<span style="color:var(--text3);font-size:13px">${company.unlisted ? "Keine Börsendaten verfügbar (nicht gelistet)." : "Keine Finanzdaten verfügbar."}</span>`; return; }
+
+  const sections = [
+    {
+      title: "💰 Ertragskennzahlen", rows: [
+        ["Umsatz (trailing 12M)", fmtNum(fin.revenue, cur)],
+        ["Umsatzwachstum", fmtPct(fin.revenueGrowth)],
+        ["Rohertrag", fmtNum(fin.grossProfit, cur)],
+        ["Rohmarge", fmtPct(fin.grossMargin)],
+        ["EBITDA", fmtNum(fin.ebitda, cur)],
+        ["EBITDA-Marge", fmtPct(fin.ebitdaMargin)],
+        ["EBIT-Marge (Op. Marge)", fmtPct(fin.operatingMargin)],
+        ["Nettogewinn", fmtNum(fin.netIncome, cur)],
+        ["Nettomarge", fmtPct(fin.netMargin)],
+        ["F&E Investitionen", fmtNum(fin.rdInvestment, cur)],
+        ["Effektive Steuerquote", fmtPct(fin.taxRate)],
+      ]
+    },
+    {
+      title: "📊 Bewertung", rows: [
+        ["Marktkapitalisierung", fmtNum(fin.marketCap, cur)],
+        ["Enterprise Value", fmtNum(fin.enterpriseValue, cur)],
+        ["KGV (trailing)", fmtX(fin.peRatio)],
+        ["KGV (forward)", fmtX(fin.peForward)],
+        ["KBV (P/B)", fmtX(fin.pbRatio)],
+        ["KUV (P/S)", fmtX(fin.psRatio)],
+        ["EV/Umsatz", fmtX(fin.evRevenue)],
+        ["EV/EBITDA", fmtX(fin.evEbitda)],
+        ["EPS (trailing)", fin.eps ? `${fin.eps.toFixed(2)} ${cur}` : "–"],
+        ["EPS (forward)", fin.epsForward ? `${fin.epsForward.toFixed(2)} ${cur}` : "–"],
+        ["Beta", fin.beta?.toFixed(2) || "–"],
+        ["Aktien ausstehend", fmtNum(fin.sharesOutstanding)],
+        ["Leerverkaufsquote", fmtPct(fin.shortFloat)],
+      ]
+    },
+    {
+      title: "💸 Dividende & Cash", rows: [
+        ["Dividendenrendite", fmtPct(fin.dividendYield)],
+        ["Dividende je Aktie", fin.dividendRate ? `${fin.dividendRate.toFixed(2)} ${cur}` : "–"],
+        ["Ausschüttungsquote", fmtPct(fin.payoutRatio)],
+        ["Free Cashflow", fmtNum(fin.freeCashFlow, cur)],
+        ["Operativer Cashflow", fmtNum(fin.operatingCashFlow, cur)],
+      ]
+    },
+    {
+      title: "⚖️ Bilanz & Kapitalstruktur", rows: [
+        ["Fremdkapitalquote (D/E)", fin.debtToEquity ? fin.debtToEquity.toFixed(2) : "–"],
+        ["Current Ratio", fin.currentRatio?.toFixed(2) || "–"],
+        ["Quick Ratio", fin.quickRatio?.toFixed(2) || "–"],
+        ["Eigenkapitalrendite (ROE)", fmtPct(fin.roe)],
+        ["Gesamtkapitalrendite (ROA)", fmtPct(fin.roa)],
+      ]
+    },
+    {
+      title: "🔭 Analysten", rows: [
+        ["Empfehlung", fin.analystRating || "–"],
+        ["Ø Kursziel", fin.targetPrice ? `${fin.targetPrice.toFixed(2)} ${cur}` : "–"],
+        ["Kursziel Hoch", fin.targetHigh ? `${fin.targetHigh.toFixed(2)} ${cur}` : "–"],
+        ["Kursziel Tief", fin.targetLow ? `${fin.targetLow.toFixed(2)} ${cur}` : "–"],
+        ["Anzahl Analysten", fin.numAnalysts || "–"],
+      ]
+    }
+  ];
+
+  el.innerHTML = sections.map(s => `
+    <div class="sec-title" style="margin-bottom:8px">${s.title}</div>
+    <table class="dtable" style="margin-bottom:18px">
+      ${s.rows.filter(r => r[1] !== "–").map(([l,v]) =>
+        `<tr class="cf" onclick="copyTR('${esc(l)}','${esc(v)}',this)"><td>${l}</td><td>${v}</td></tr>`
+      ).join("")}
+    </table>
+  `).join("");
+}
+
+async function renderChartTab(company, quote) {
+  document.getElementById("d-chart-cur").textContent = quote?.currency ? `(${quote.currency})` : "";
+  document.getElementById("d-chart-msg").textContent = "";
+  if (company.unlisted || !company.ticker || company.ticker === "-") {
+    document.getElementById("d-chart-msg").textContent = "Kein Ticker – Kurschart nicht verfügbar.";
     return;
   }
-  el.innerHTML = `<div class="news-list">
-    ${news.map(n => `
-      <a class="news-item" href="${n.link}" target="_blank" rel="noopener" style="display:block;text-decoration:none">
-        <div class="news-title">${n.title}</div>
-        <div class="news-meta">${n.date}${n.source ? " · " + n.source : ""}</div>
-        ${n.desc ? `<div class="news-desc">${n.desc}</div>` : ""}
-      </a>`).join("")}
-  </div>`;
+  const hist = await API.getPriceHistory(company.ticker);
+  if (!hist) { document.getElementById("d-chart-msg").textContent = "Kursdaten konnten nicht geladen werden."; return; }
+  detailData.hist = hist;
+  Charts.renderPriceChart("price-chart", hist, quote);
 }
 
-function updateCacheInfo(company) {
+function renderHistoryTab(company, fin) {
+  if (!fin?.annualIS?.length) {
+    document.getElementById("d-history-table").innerHTML = `<span style="color:var(--text3);font-size:13px">Keine historischen Daten verfügbar.</span>`;
+    return;
+  }
+  const cur = detailData.quote?.currency || "";
+  Charts.renderAnnualChart("annual-chart", fin.annualIS, cur);
+  Charts.renderQuarterlyChart("quarterly-chart", fin.quarterlyNI, cur);
+
+  const years = [...fin.annualIS].reverse();
+  const hdr = `<tr>${["Jahr","Umsatz","Rohertrag","Rohmarge","EBIT","Nettogewinn","F&E"].map(h => `<th style="text-align:left;padding:6px 8px;font-size:11px;font-weight:700;color:var(--text3);border-bottom:2px solid var(--border)">${h}</th>`).join("")}</tr>`;
+  const rows2 = years.map(y => {
+    const gm = y.revenue && y.grossProfit ? ((y.grossProfit / y.revenue) * 100).toFixed(1) + "%" : "–";
+    return `<tr class="cf" style="font-size:12px">
+      <td style="padding:6px 8px;border-bottom:1px solid var(--border);font-weight:600">${y.date?.substring(0,4)||"–"}</td>
+      <td style="padding:6px 8px;border-bottom:1px solid var(--border)">${fmtNum(y.revenue, cur)}</td>
+      <td style="padding:6px 8px;border-bottom:1px solid var(--border)">${fmtNum(y.grossProfit, cur)}</td>
+      <td style="padding:6px 8px;border-bottom:1px solid var(--border)">${gm}</td>
+      <td style="padding:6px 8px;border-bottom:1px solid var(--border)">${fmtNum(y.ebit, cur)}</td>
+      <td style="padding:6px 8px;border-bottom:1px solid var(--border);color:${(y.netIncome||0)>=0?'var(--green)':'var(--red)'}">${fmtNum(y.netIncome, cur)}</td>
+      <td style="padding:6px 8px;border-bottom:1px solid var(--border)">${fmtNum(y.rd, cur)}</td>
+    </tr>`;
+  }).join("");
+  document.getElementById("d-history-table").innerHTML = `<table class="dtable" style="font-size:12px"><thead>${hdr}</thead><tbody>${rows2}</tbody></table>`;
+}
+
+function renderOwnershipTab(own) {
+  if (!own) {
+    document.getElementById("d-investors").innerHTML = `<span style="color:var(--text3);font-size:13px">Keine Daten verfügbar.</span>`;
+    return;
+  }
+  Charts.renderOwnershipChart("ownership-chart", own);
+  const rows = (own.topInstitutions || []).map(i =>
+    `<tr class="cf" onclick="copyTR('${esc(i.name)}','${fmtPct(i.pct)}',this)">
+      <td style="font-size:12px">${i.name}</td>
+      <td style="font-size:12px;font-weight:600">${fmtPct(i.pct)}</td>
+      <td style="font-size:11px;color:var(--text3)">${i.change !== undefined ? (i.change > 0 ? `▲ +${fmtPct(i.change)}` : `▼ ${fmtPct(i.change)}`) : ""}</td>
+    </tr>`
+  ).join("");
+  document.getElementById("d-investors").innerHTML = rows ? `<table class="dtable">${rows}</table>` : `<span style="color:var(--text3);font-size:13px">–</span>`;
+}
+
+function renderNews(news) {
+  const el = document.getElementById("d-news");
+  if (!news?.length) { el.innerHTML = `<span style="color:var(--text3);font-size:13px">Keine Nachrichten gefunden.</span>`; return; }
+  el.innerHTML = `<div class="news-list">${news.map(n =>
+    `<a class="news-item" href="${n.link}" target="_blank" rel="noopener">
+      <div class="news-title">${n.title}</div>
+      <div class="news-meta">${n.date}${n.source ? " · " + n.source : ""}</div>
+      ${n.desc ? `<div class="news-desc">${n.desc}</div>` : ""}
+    </a>`
+  ).join("")}</div>`;
+}
+
+function renderReports(company) {
+  const links = API.getIRLinks(company);
+  document.getElementById("d-reports").innerHTML = links.map(l =>
+    `<a class="ir-link" href="${l.url}" target="_blank" rel="noopener">${l.icon} ${l.label}</a>`
+  ).join("");
+}
+
+function renderCacheAge(company) {
   const age = Cache.age(`quote_${company.ticker}`);
-  const el = document.getElementById("cache-info");
-  if (el && age) el.textContent = `⏱ ${t("updated")} ${age}`;
+  const el = document.getElementById("d-cache");
+  if (el && age) el.textContent = `⏱ Aktualisiert vor ${age}`;
 }
 
-// ── Tab Switching ─────────────────────────────────────────────
-function switchTab(tabId, btn) {
-  document.querySelectorAll(".detail-tab").forEach(t => t.classList.remove("active"));
-  document.querySelectorAll(".tab-pane").forEach(p => p.classList.remove("active"));
-  btn.classList.add("active");
-  document.getElementById("tab-" + tabId)?.classList.add("active");
+// ── Copy ──────────────────────────────────────────────────────
+function copyKPI(l, v, el) {
+  navigator.clipboard.writeText(`${l}: ${v}`).then(() => { el.classList.add("copied"); toast("Kopiert!"); setTimeout(() => el.classList.remove("copied"), 1500); });
 }
-
-// ── Copy Actions ──────────────────────────────────────────────
-function copyKPI(label, value, el) {
-  navigator.clipboard.writeText(`${label}: ${value}`).then(() => showCopied(el));
+function copyTR(l, v, tr) {
+  const clean = v.replace(/<[^>]*>/g, "");
+  navigator.clipboard.writeText(`${l}: ${clean}`).then(() => { tr.classList.add("copied"); toast("Kopiert!"); setTimeout(() => tr.classList.remove("copied"), 1500); });
 }
-
-function copyTableRow(label, value, tr) {
-  const cleanVal = value.replace(/<[^>]*>/g,"");
-  navigator.clipboard.writeText(`${label}: ${cleanVal}`).then(() => showCopied(tr));
+function copyWiki(text, el) {
+  navigator.clipboard.writeText(text).then(() => { el.style.borderLeftColor = "var(--green)"; toast("Kopiert!"); setTimeout(() => el.style.borderLeftColor = "", 1500); });
 }
-
-function copyWikiText(text, el) {
-  navigator.clipboard.writeText(text).then(() => {
-    el.style.borderLeftColor = "var(--c-green)";
-    setTimeout(() => el.style.borderLeftColor = "", 1500);
-    showToast(t("copied"));
-  });
-}
-
-function showCopied(el) {
-  el.classList.add("copied");
-  showToast(t("copied"));
-  setTimeout(() => el.classList.remove("copied"), 1500);
-}
-
-function showToast(msg) {
-  const toast = document.getElementById("toast");
-  toast.textContent = msg;
-  toast.classList.add("show");
-  setTimeout(() => toast.classList.remove("show"), 1800);
+function toast(msg) {
+  const t = document.getElementById("toast"); t.textContent = msg; t.classList.add("show");
+  setTimeout(() => t.classList.remove("show"), 1800);
 }
 
 // ── Export ────────────────────────────────────────────────────
 async function doExport(type) {
-  if (!currentCompany) return;
-  const { wiki, quote, fin } = detailData;
+  if (!current) return;
+  const { wiki, quote, fin, mgmt } = detailData;
+  const notes = document.getElementById("notes-area").value;
   const btn = document.getElementById("btn-" + type);
-  const origText = btn.textContent;
-  btn.textContent = "⏳";
+  const orig = btn?.textContent || "";
+  if (btn) btn.textContent = "⏳";
   try {
-    if (type === "md") {
-      await Exporter.copyMarkdown(currentCompany, wiki, quote, fin, lang);
-      btn.textContent = "✅ " + t("copied");
-      btn.classList.add("success");
-    } else if (type === "pdf") {
-      Exporter.printPDF(currentCompany, wiki, quote, fin, lang);
-      btn.textContent = "✅";
-    } else if (type === "docx") {
-      await Exporter.exportDOCX(currentCompany, wiki, quote, fin, lang);
-      btn.textContent = "✅";
-    }
-  } catch(e) {
-    btn.textContent = "❌";
-    console.error(e);
-  }
-  setTimeout(() => { btn.textContent = origText; btn.classList.remove("success"); }, 2000);
+    if (type === "md") { await Exporter.copyMarkdown(current, wiki, quote, fin, mgmt, notes, lang); toast("Markdown kopiert!"); if (btn) { btn.textContent = "✅"; btn.classList.add("ok"); } }
+    else if (type === "pdf") { Exporter.printPDF(current, wiki, quote, fin, mgmt, notes, lang); if (btn) btn.textContent = "✅"; }
+    else if (type === "docx") { await Exporter.exportDOCX(current, wiki, quote, fin, mgmt, notes, lang); if (btn) btn.textContent = "✅"; }
+  } catch(e) { if (btn) btn.textContent = "❌"; console.error(e); }
+  setTimeout(() => { if (btn) { btn.textContent = orig; btn.classList.remove("ok"); } }, 2500);
 }
 
-// ── Close Detail ──────────────────────────────────────────────
+// ── Close / Overlay ───────────────────────────────────────────
 function closeDetail() {
-  document.getElementById("detail-overlay").classList.remove("open");
+  document.getElementById("overlay").classList.remove("open");
   document.body.style.overflow = "";
-  currentCompany = null;
+  current = null;
 }
-function handleOverlayClick(e) {
-  if (e.target === document.getElementById("detail-overlay")) closeDetail();
-}
+function overlayClick(e) { if (e.target === document.getElementById("overlay")) closeDetail(); }
 document.addEventListener("keydown", e => { if (e.key === "Escape") closeDetail(); });
 
 // ── Lang / Theme ──────────────────────────────────────────────
 function setLang(l) {
-  lang = l;
-  localStorage.setItem("lang", l);
-  document.getElementById("lang-de").classList.toggle("active", l === "de");
-  document.getElementById("lang-en").classList.toggle("active", l === "en");
-  document.getElementById("search").placeholder = I18N[l].searchPlaceholder;
-  applyLang();
-  renderGrid();
+  lang = l; localStorage.setItem("cp2_lang", l);
+  document.getElementById("l-de").classList.toggle("active", l === "de");
+  document.getElementById("l-en").classList.toggle("active", l === "en");
+  document.documentElement.lang = l;
 }
-
-function applyLang() {
-  document.documentElement.lang = lang;
-  document.getElementById("search").placeholder = I18N[lang].searchPlaceholder;
-}
-
+function applyLang() { setLang(lang); }
 function toggleTheme() {
   theme = theme === "light" ? "dark" : "light";
-  localStorage.setItem("theme", theme);
-  applyTheme();
+  localStorage.setItem("cp2_theme", theme); applyTheme();
+  // re-render open charts
+  if (current && detailData.hist) Charts.renderPriceChart("price-chart", detailData.hist, detailData.quote);
+  if (current && detailData.fin) {
+    Charts.renderAnnualChart("annual-chart", detailData.fin.annualIS, detailData.quote?.currency);
+    Charts.renderQuarterlyChart("quarterly-chart", detailData.fin.quarterlyNI, detailData.quote?.currency);
+  }
+  if (current && detailData.own) Charts.renderOwnershipChart("ownership-chart", detailData.own);
 }
-function applyTheme() {
-  document.documentElement.setAttribute("data-theme", theme);
-}
+function applyTheme() { document.documentElement.setAttribute("data-theme", theme); }
 
-// ── Escape for attribute ──────────────────────────────────────
-function escapeAttr(s) {
-  if (!s) return "";
-  return String(s).replace(/'/g,"\\'").replace(/"/g,"&quot;").replace(/<[^>]*>/g,"").substring(0,500);
-}
+// ── Escape helper ─────────────────────────────────────────────
+function esc(s) { return String(s || "").replace(/'/g, "\\'").replace(/"/g,"&quot;").replace(/<[^>]*>/g,"").substring(0, 400); }
 </script>
 </body>
 </html>
