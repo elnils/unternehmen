@@ -11,6 +11,13 @@
 <body>
 <div id="app">
 
+<!-- ── LOADING SCREEN ─────────────────────────────────────────── -->
+<div id="loading-screen" style="position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;gap:14px">
+  <div style="font-family:'Syne',sans-serif;font-size:24px;font-weight:800">Company<span style="color:var(--accent)">Profiles</span></div>
+  <div class="spin" style="width:28px;height:28px;border-width:3px"></div>
+  <div id="load-msg" style="font-size:13px;color:var(--text3)">Lade Marktdaten…</div>
+</div>
+
 <!-- ── TOP BAR ──────────────────────────────────────────────── -->
 <header id="topbar">
   <div class="tb-inner">
@@ -20,6 +27,7 @@
       <input id="search" type="search" placeholder="Unternehmen, Ticker, Land…" autocomplete="off">
     </div>
     <div class="tb-controls">
+      <span id="data-age" style="font-size:11px;color:var(--text3);margin-right:4px"></span>
       <button class="btn-sm active" id="l-de" onclick="setLang('de')">DE</button>
       <button class="btn-sm" id="l-en" onclick="setLang('en')">EN</button>
       <button class="btn-icon" onclick="toggleTheme()" title="Theme">🌓</button>
@@ -38,7 +46,7 @@
     <button class="chip" data-f="index" data-v="EuroStoxx50">EURO STOXX 50</button>
     <button class="chip" data-f="index" data-v="Dow30">Dow Jones 30</button>
     <button class="chip" data-f="index" data-v="Nasdaq100">NASDAQ 100</button>
-    <button class="chip" data-f="index" data-v="SP500">S&P 500</button>
+    <button class="chip" data-f="index" data-v="SP500">S&amp;P 500</button>
     <button class="chip" data-f="index" data-v="Unlisted">Nicht gelistet</button>
     <div class="fb-sep"></div>
     <span class="fb-label">Land</span>
@@ -48,7 +56,6 @@
     <button class="chip" data-f="country" data-v="FR">🇫🇷 FR</button>
     <button class="chip" data-f="country" data-v="NL">🇳🇱 NL</button>
     <button class="chip" data-f="country" data-v="GB">🇬🇧 GB</button>
-    <button class="chip" data-f="country" data-v="CH">🇨🇭 CH</button>
     <button class="chip" data-f="country" data-v="CN">🇨🇳 CN</button>
     <button class="chip" data-f="country" data-v="IN">🇮🇳 IN</button>
     <div class="fb-sep"></div>
@@ -88,15 +95,13 @@
   <div id="company-grid"></div>
   <div id="empty" style="display:none;text-align:center;padding:60px 20px;color:var(--text3)">
     <div style="font-size:32px;margin-bottom:8px">🔍</div>
-    <div id="empty-msg">Keine Unternehmen gefunden.</div>
+    <div>Keine Unternehmen gefunden.</div>
   </div>
 </main>
 
 <!-- ── DETAIL OVERLAY ───────────────────────────────────────── -->
 <div id="overlay" onclick="overlayClick(event)">
  <div id="panel">
-
-  <!-- Hero -->
   <div class="hero">
     <button class="hero-close" onclick="closeDetail()">✕</button>
     <div class="hero-top">
@@ -108,17 +113,13 @@
       </div>
     </div>
   </div>
-
-  <!-- Export bar -->
   <div class="export-bar">
     <span class="lbl">Export:</span>
-    <button class="btn-exp" id="btn-md" onclick="doExport('md')">📋 Markdown</button>
-    <button class="btn-exp" id="btn-pdf" onclick="doExport('pdf')">🖨️ PDF</button>
+    <button class="btn-exp" id="btn-md"   onclick="doExport('md')">📋 Markdown</button>
+    <button class="btn-exp" id="btn-pdf"  onclick="doExport('pdf')">🖨️ PDF</button>
     <button class="btn-exp" id="btn-docx" onclick="doExport('docx')">📄 Word</button>
     <span class="cache-age" id="d-cache"></span>
   </div>
-
-  <!-- Tabs -->
   <div class="tabs">
     <button class="tab active" onclick="swTab('overview',this)">Übersicht</button>
     <button class="tab" onclick="swTab('financials',this)">📊 Kennzahlen</button>
@@ -129,64 +130,48 @@
     <button class="tab" onclick="swTab('reports',this)">📄 Berichte</button>
     <button class="tab" onclick="swTab('notes',this)">🖊️ Notizen</button>
   </div>
-
-  <!-- Panel body -->
   <div class="panel-body">
 
-    <!-- ── OVERVIEW TAB ── -->
+    <!-- Overview -->
     <div class="pane active" id="tab-overview">
-      <!-- KPI row -->
-      <div class="kpi-grid" id="d-kpis" style="margin-bottom:16px">
-        <div class="kpi"><div class="skeleton" style="height:46px;width:100%"></div></div>
-        <div class="kpi"><div class="skeleton" style="height:46px;width:100%"></div></div>
-        <div class="kpi"><div class="skeleton" style="height:46px;width:100%"></div></div>
-        <div class="kpi"><div class="skeleton" style="height:46px;width:100%"></div></div>
-      </div>
-
-      <!-- Two-column: facts + ecosystem -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px" id="d-2col">
+      <div class="kpi-grid" id="d-kpis" style="margin-bottom:16px"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
         <div>
           <div class="sec-title">🏢 Stammdaten</div>
           <table class="dtable" id="d-facts"></table>
         </div>
         <div>
-          <div class="sec-title">🌐 Handelszonen & Ökosystem</div>
+          <div class="sec-title">🌐 Handelszonen &amp; Ökosystem</div>
           <div id="d-eco"></div>
         </div>
       </div>
-
-      <!-- Management -->
       <div style="margin-top:16px">
         <div class="sec-title">👤 Management</div>
-        <div id="d-mgmt"><div style="color:var(--text3);font-size:13px">Wird geladen…</div></div>
+        <div id="d-mgmt"></div>
       </div>
-
-      <!-- Competitors -->
       <div style="margin-top:16px">
         <div class="sec-title">🔁 Wettbewerber</div>
         <div id="d-comps" class="comp-chips"></div>
       </div>
-
-      <!-- Wikipedia -->
       <div style="margin-top:16px">
         <div class="sec-title">📖 Über das Unternehmen <small id="d-wiki-src"></small></div>
-        <div id="d-wiki"><div style="color:var(--text3);font-size:13px">Wird geladen…</div></div>
+        <div id="d-wiki"></div>
       </div>
     </div>
 
-    <!-- ── FINANCIALS TAB ── -->
+    <!-- Financials -->
     <div class="pane" id="tab-financials">
-      <div id="d-fin-content"><div style="display:flex;align-items:center;gap:8px;color:var(--text3)"><span class="spin"></span> Lade Kennzahlen…</div></div>
+      <div id="d-fin-content"></div>
     </div>
 
-    <!-- ── CHART TAB ── -->
+    <!-- Chart -->
     <div class="pane" id="tab-chart">
       <div class="sec-title">📈 Kursentwicklung – 12 Monate <small id="d-chart-cur"></small></div>
       <div class="chart-wrap" id="price-chart-wrap"><canvas id="price-chart"></canvas></div>
       <div id="d-chart-msg" style="font-size:12px;color:var(--text3);margin-top:8px"></div>
     </div>
 
-    <!-- ── 5-YEAR HISTORY TAB ── -->
+    <!-- 5-Year History -->
     <div class="pane" id="tab-history">
       <div class="sec-title">📅 Umsatz / EBIT / Nettogewinn (5 Jahre)</div>
       <div class="chart-wrap" id="annual-chart-wrap"><canvas id="annual-chart"></canvas></div>
@@ -200,7 +185,7 @@
       </div>
     </div>
 
-    <!-- ── OWNERSHIP TAB ── -->
+    <!-- Ownership -->
     <div class="pane" id="tab-ownership">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
         <div>
@@ -214,22 +199,22 @@
       </div>
     </div>
 
-    <!-- ── NEWS TAB ── -->
+    <!-- News -->
     <div class="pane" id="tab-news">
-      <div class="sec-title">📰 Aktuelle Nachrichten</div>
-      <div id="d-news"><div style="display:flex;align-items:center;gap:8px;color:var(--text3)"><span class="spin"></span> Lade Nachrichten…</div></div>
+      <div class="sec-title">📰 Aktuelle Nachrichten <small id="d-news-age"></small></div>
+      <div id="d-news"></div>
     </div>
 
-    <!-- ── REPORTS TAB ── -->
+    <!-- Reports -->
     <div class="pane" id="tab-reports">
-      <div class="sec-title">📄 Geschäftsberichte & Investor Relations</div>
+      <div class="sec-title">📄 Geschäftsberichte &amp; Investor Relations</div>
       <div id="d-reports" class="ir-grid"></div>
     </div>
 
-    <!-- ── NOTES TAB ── -->
+    <!-- Notes -->
     <div class="pane" id="tab-notes">
       <div class="sec-title">🖊️ Eigene Notizen <small>werden beim Export eingebettet, nicht gespeichert</small></div>
-      <textarea id="notes-area" placeholder="Hier können Sie persönliche Notizen, Beobachtungen oder Ergänzungen eintragen. Diese werden beim Export (Markdown / PDF / Word) eingebettet, aber nicht langfristig gespeichert."></textarea>
+      <textarea id="notes-area" placeholder="Hier können Sie persönliche Notizen, Beobachtungen oder Ergänzungen eintragen…"></textarea>
       <div style="display:flex;gap:8px;margin-top:10px">
         <button class="btn-exp" onclick="doExport('md')">📋 Mit Notizen kopieren (Markdown)</button>
         <button class="btn-exp" onclick="doExport('pdf')">🖨️ Als PDF drucken</button>
@@ -237,32 +222,63 @@
       </div>
     </div>
 
-  </div><!-- /panel-body -->
- </div><!-- /panel -->
-</div><!-- /overlay -->
+  </div>
+ </div>
+</div>
 
 <div id="toast"></div>
-
-</div><!-- /app -->
+</div>
 
 <!-- Scripts -->
 <script src="data/companies.js"></script>
-<script src="js/cache.js"></script>
-<script src="js/api.js"></script>
 <script src="js/charts.js"></script>
 <script src="js/export.js"></script>
 <script>
 // ── State ─────────────────────────────────────────────────────
-let lang = localStorage.getItem("cp2_lang") || "de";
-let theme = localStorage.getItem("cp2_theme") || "light";
+let lang    = localStorage.getItem("cp_lang")  || "de";
+let theme   = localStorage.getItem("cp_theme") || "light";
 let fIndex = "", fCountry = "", fSector = "", fRegion = "", fSearch = "";
 let current = null, detailData = {};
-let quoteLoadQueue = [];
+let MARKET_DATA = {};   // loaded from data/market_data.json
 
-// ── Init ──────────────────────────────────────────────────────
-document.addEventListener("DOMContentLoaded", () => {
+// ── Boot: load JSON ───────────────────────────────────────────
+async function boot() {
   applyTheme(); applyLang();
+  try {
+    document.getElementById("load-msg").textContent = "Lade Marktdaten…";
+    const r = await fetch(`data/market_data.json?v=${Date.now()}`);
+    if (r.ok) {
+      const json = await r.json();
+      MARKET_DATA = json.data || {};
+      // Show data age
+      if (json.fetchedAt) {
+        const dt = new Date(json.fetchedAt);
+        const now = new Date();
+        const diffH = Math.round((now - dt) / 3600000);
+        const ageStr = diffH < 1 ? "< 1h" : diffH < 24 ? `${diffH}h` : `${Math.round(diffH/24)}d`;
+        document.getElementById("data-age").textContent = `⏱ ${ageStr} alt`;
+        document.getElementById("data-age").title = `Aktualisiert: ${dt.toLocaleString("de-DE")}`;
+      }
+      document.getElementById("load-msg").textContent = `${Object.keys(MARKET_DATA).length} Unternehmen geladen`;
+    } else {
+      document.getElementById("load-msg").textContent = "Keine Daten – erster Run?";
+    }
+  } catch(e) {
+    document.getElementById("load-msg").textContent = "Keine Datei – bitte GitHub Actions einrichten";
+    console.warn("market_data.json not found – first run or local dev?", e);
+  }
+
+  // Hide loading screen
+  setTimeout(() => {
+    const ls = document.getElementById("loading-screen");
+    ls.style.opacity = "0";
+    ls.style.transition = "opacity .3s";
+    setTimeout(() => ls.style.display = "none", 300);
+  }, 400);
+
   renderGrid();
+
+  // Event listeners
   document.getElementById("search").addEventListener("input", e => {
     fSearch = e.target.value.toLowerCase().trim();
     renderGrid();
@@ -272,47 +288,63 @@ document.addEventListener("DOMContentLoaded", () => {
       const f = b.dataset.f, v = b.dataset.v;
       document.querySelectorAll(`[data-f="${f}"]`).forEach(x => x.classList.remove("active"));
       b.classList.add("active");
-      if (f === "index") fIndex = v;
+      if (f === "index")   fIndex   = v;
       if (f === "country") fCountry = v;
-      if (f === "sector") fSector = v;
-      if (f === "region") fRegion = v;
+      if (f === "sector")  fSector  = v;
+      if (f === "region")  fRegion  = v;
       renderGrid();
     });
   });
-});
+}
 
 // ── Grid ──────────────────────────────────────────────────────
 function renderGrid() {
-  const grid = document.getElementById("company-grid");
+  const grid  = document.getElementById("company-grid");
   const empty = document.getElementById("empty");
-  const rc = document.getElementById("rc");
+  const rc    = document.getElementById("rc");
+
   const filtered = COMPANIES_CLEAN.filter(c => {
-    if (fIndex && !(c.index || []).includes(fIndex)) return false;
-    if (fCountry && c.country !== fCountry) return false;
-    if (fSector && c.sector !== fSector) return false;
-    if (fRegion && !(c.tradeRegions || []).includes(fRegion)) return false;
+    if (fIndex   && !(c.index || []).includes(fIndex))         return false;
+    if (fCountry && c.country !== fCountry)                    return false;
+    if (fSector  && c.sector  !== fSector)                     return false;
+    if (fRegion  && !(c.tradeRegions || []).includes(fRegion)) return false;
     if (fSearch) {
       const q = fSearch;
-      if (!c.name.toLowerCase().includes(q) && !c.ticker.toLowerCase().includes(q)
-        && !c.id.toLowerCase().includes(q) && !(c.country||"").toLowerCase().includes(q)
-        && !(c.hq||"").toLowerCase().includes(q) && !(c.sector||"").toLowerCase().includes(q)) return false;
+      if (![c.name, c.ticker, c.id, c.country, c.hq, c.sector]
+          .filter(Boolean).some(s => s.toLowerCase().includes(q))) return false;
     }
     return true;
   });
+
   rc.textContent = `${filtered.length} Unternehmen`;
   if (!filtered.length) { grid.innerHTML = ""; empty.style.display = ""; return; }
   empty.style.display = "none";
   grid.innerHTML = filtered.map(c => cardHTML(c)).join("");
-  grid.querySelectorAll(".card").forEach(el => el.addEventListener("click", () => openDetail(el.dataset.id)));
-  setTimeout(() => loadBatchQuotes(filtered.slice(0, 40)), 300);
+  grid.querySelectorAll(".card").forEach(el =>
+    el.addEventListener("click", () => openDetail(el.dataset.id))
+  );
 }
 
 function cardHTML(c) {
-  const flag = FLAGS[c.country] || "🏳️";
-  const icon = SECTOR_ICONS[c.sector] || "🏢";
-  const cached = Cache.get(`quote_${c.ticker}`);
-  const priceHTML = cached ? quotePriceHTML(cached) : `<span class="spin" style="width:14px;height:14px;border-width:1.5px"></span>`;
-  const unlistedBadge = c.unlisted ? `<span class="unlisted-badge">Nicht gelistet</span>` : `<span class="card-ticker">${c.ticker}</span>`;
+  const flag   = FLAGS[c.country]  || "🏳️";
+  const icon   = SECTOR_ICONS[c.sector] || "🏢";
+  const bundle = MARKET_DATA[c.id];
+  const quote  = bundle?.quote;
+
+  const unlistedBadge = c.unlisted
+    ? `<span class="unlisted-badge">Nicht gelistet</span>`
+    : `<span class="card-ticker">${c.ticker}</span>`;
+
+  let priceHTML;
+  if (quote) {
+    const sign = quote.change >= 0 ? "+" : "";
+    const cls  = quote.change > 0 ? "pos" : quote.change < 0 ? "neg" : "neu";
+    priceHTML  = `<span class="price-val">${quote.price?.toFixed(2)} <small style="font-size:10px;font-weight:400">${quote.currency}</small></span>
+                  <span class="price-chg ${cls}">${sign}${quote.changePct?.toFixed(2)}%</span>`;
+  } else {
+    priceHTML = `<span style="color:var(--text3);font-size:12px">${c.unlisted ? "Nicht gelistet" : "–"}</span>`;
+  }
+
   return `<div class="card" data-id="${c.id}">
     <div class="card-top">
       <div class="card-flag">${flag}</div>
@@ -323,96 +355,61 @@ function cardHTML(c) {
       ${unlistedBadge}
     </div>
     <div class="card-tags">
-      ${(c.index||[]).map(i => `<span class="tag">${i}</span>`).join("")}
-      ${(c.tradeRegions||[]).slice(0,2).map(r => `<span class="tag">${TRADE_REGION_ICONS[r]||""} ${r}</span>`).join("")}
+      ${(c.index||[]).map(i=>`<span class="tag">${i}</span>`).join("")}
+      ${(c.tradeRegions||[]).slice(0,2).map(r=>`<span class="tag">${TRADE_REGION_ICONS[r]||""} ${r}</span>`).join("")}
     </div>
-    <div class="card-price-row" id="pr-${c.id}">${priceHTML}</div>
+    <div class="card-price-row">${priceHTML}</div>
   </div>`;
 }
 
-function quotePriceHTML(q) {
-  if (!q) return `<span style="color:var(--text3);font-size:12px">–</span>`;
-  const sign = q.change >= 0 ? "+" : "";
-  const cls = q.change > 0 ? "pos" : q.change < 0 ? "neg" : "neu";
-  return `<span class="price-val">${q.price?.toFixed(2)} <small style="font-size:10px;font-weight:400">${q.currency||""}</small></span>
-    <span class="price-chg ${cls}">${sign}${q.changePct?.toFixed(2)}%</span>`;
-}
-
-async function loadBatchQuotes(companies) {
-  for (const c of companies) {
-    if (c.unlisted || !c.ticker || c.ticker === "-") continue;
-    const el = document.getElementById(`pr-${c.id}`);
-    if (!el) continue;
-    const q = await API.getQuote(c.ticker);
-    if (el && q) el.innerHTML = quotePriceHTML(q);
-    await new Promise(r => setTimeout(r, 80));
-  }
-}
-
 // ── Detail Panel ──────────────────────────────────────────────
-async function openDetail(id) {
+function openDetail(id) {
   const company = COMPANY_MAP[id];
   if (!company) return;
-  current = company; detailData = {};
-  document.getElementById("notes-area").value = "";
+  current = company;
 
-  const overlay = document.getElementById("overlay");
-  overlay.classList.add("open");
+  const bundle = MARKET_DATA[id] || {};
+  const { quote, financials: fin, management: mgmt, wikipedia: wiki,
+          wikidata: wd, ownership: own, priceHistory: hist, newsDE: news } = bundle;
+
+  detailData = { quote, fin, mgmt, wiki, wd, own, hist, news };
+
+  document.getElementById("notes-area").value = "";
+  document.getElementById("overlay").classList.add("open");
   document.body.style.overflow = "hidden";
 
+  // Hero
   const flag = FLAGS[company.country] || "🏳️";
   const icon = SECTOR_ICONS[company.sector] || "🏢";
-
-  // Hero
   document.getElementById("d-icon").textContent = flag;
   document.getElementById("d-name").textContent = company.name;
-  document.getElementById("d-desc").textContent = `${icon} ${company.sector} · ${company.hq || company.country}`;
+  document.getElementById("d-desc").textContent = mgmt?.description
+    ? mgmt.description.substring(0,130) + "…"
+    : `${icon} ${company.sector} · ${company.hq || company.country}`;
   document.getElementById("d-badges").innerHTML = [
     `<span class="hero-badge">${company.ticker !== "-" ? company.ticker : "Nicht gelistet"}</span>`,
     `<span class="hero-badge">${company.exchange}</span>`,
     ...(company.index||[]).map(i => `<span class="hero-badge">${i}</span>`)
   ].join("");
 
-  // Reset active tab
-  swTab("overview", document.querySelector(".tab"));
-  document.querySelectorAll(".tab")[0].click();
+  // Reset to overview tab
+  document.querySelectorAll(".tab").forEach((t,i) => t.classList.toggle("active", i===0));
+  document.querySelectorAll(".pane").forEach((p,i) => p.classList.toggle("active", i===0));
 
-  // Render static stuff immediately
-  renderFacts(company);
+  // Render all panes
+  renderKPIs(company, quote, fin);
+  renderFacts(company, wd, mgmt);
   renderEcosystem(company);
   renderCompetitors(company);
-  renderReports(company);
-
-  // Parallel fetch
-  const [wiki, quote, fin, wdata, news, mgmt, own] = await Promise.all([
-    API.getWikipedia(company.wikipedia, lang),
-    API.getQuote(company.ticker),
-    API.getFinancials(company.ticker),
-    API.getWikidata(company.wikidata),
-    API.getNews(company, lang),
-    API.getManagement(company.ticker),
-    API.getOwnership(company.ticker),
-  ]);
-
-  detailData = { wiki, quote, fin, wdata, news, mgmt, own };
-
-  // Update description from Yahoo
-  if (mgmt?.description) {
-    document.getElementById("d-desc").textContent = mgmt.description.substring(0, 120) + "…";
-  }
-
-  renderKPIs(company, quote, fin);
   renderWikiContent(wiki);
-  renderManagement(mgmt, company);
-  renderFinancials(company, quote, fin, mgmt);
-  renderChartTab(company, quote);
-  renderHistoryTab(company, fin);
-  renderOwnershipTab(own);
-  renderNews(news);
-  renderCacheAge(company);
-
-  // Update facts with live data
-  renderFacts(company, wdata, mgmt);
+  renderManagement(mgmt);
+  renderFinancials(company, quote, fin);
+  renderChartPane(company, quote, hist);
+  renderHistoryPane(company, fin, quote);
+  renderOwnershipPane(own);
+  renderNewsPane(news, bundle?.fetchedAt);
+  renderReportsPane(company);
+  renderCacheAge(bundle?.fetchedAt);
 }
 
 // ── Tabs ──────────────────────────────────────────────────────
@@ -421,314 +418,326 @@ function swTab(id, btn) {
   document.querySelectorAll(".pane").forEach(p => p.classList.remove("active"));
   btn.classList.add("active");
   document.getElementById("tab-" + id)?.classList.add("active");
+  // Render charts only when tab becomes visible (avoids canvas issues)
+  if (id === "chart" && detailData.hist)
+    Charts.renderPriceChart("price-chart", detailData.hist, detailData.quote);
+  if (id === "history" && detailData.fin) {
+    const cur = detailData.quote?.currency || "";
+    Charts.renderAnnualChart("annual-chart", detailData.fin.annualIS, cur);
+    Charts.renderQuarterlyChart("quarterly-chart", detailData.fin.quarterlyNI, cur);
+  }
+  if (id === "ownership" && detailData.own)
+    Charts.renderOwnershipChart("ownership-chart", detailData.own);
 }
 
 // ── Render helpers ─────────────────────────────────────────────
 function renderKPIs(company, quote, fin) {
-  const cur = quote?.currency || "";
+  const cur  = quote?.currency || "";
   const sign = v => v >= 0 ? "+" : "";
   const kpis = [
-    { label: "Kurs", val: quote ? `${quote.price?.toFixed(2)} ${cur}` : "–", sub: quote ? `${sign(quote.change)}${quote.changePct?.toFixed(2)}% heute` : "", color: quote ? (quote.change >= 0 ? "var(--green)" : "var(--red)") : "" },
-    { label: "Marktkapitalisierung", val: fin?.marketCap ? fmtNum(fin.marketCap, cur) : (quote ? "–" : "Nicht gelistet"), sub: "" },
-    { label: "52W Hoch", val: quote ? `${quote.high52} ${cur}` : "–", sub: "" },
-    { label: "52W Tief", val: quote ? `${quote.low52} ${cur}` : "–", sub: "" },
-    { label: "KGV (trailing)", val: fin?.peRatio ? fmtX(fin.peRatio) : "–", sub: fin?.peForward ? `Forward: ${fmtX(fin.peForward)}` : "" },
-    { label: "Dividende", val: fin?.dividendYield ? fmtPct(fin.dividendYield) : "–", sub: fin?.dividendRate ? `${fin.dividendRate?.toFixed(2)} ${cur}/Aktie` : "" },
+    { l:"Kurs", v: quote ? `${quote.price?.toFixed(2)} ${cur}` : "–",
+      sub: quote ? `${sign(quote.change)}${quote.changePct?.toFixed(2)}% heute` : "",
+      color: quote ? (quote.change>=0?"var(--green)":"var(--red)") : "" },
+    { l:"Marktkapitalisierung", v: fin?.marketCap ? fmtNum(fin.marketCap,cur) : "–" },
+    { l:"52W Hoch",  v: quote ? `${quote.high52} ${cur}` : "–" },
+    { l:"52W Tief",  v: quote ? `${quote.low52} ${cur}` : "–" },
+    { l:"KGV (trailing)", v: fin?.peRatio ? fmtX(fin.peRatio) : "–",
+      sub: fin?.peForward ? `Forward: ${fmtX(fin.peForward)}` : "" },
+    { l:"Dividende", v: fin?.dividendYield ? fmtPct(fin.dividendYield) : "–",
+      sub: fin?.dividendRate ? `${fin.dividendRate?.toFixed(2)} ${cur}/Aktie` : "" },
   ];
-  document.getElementById("d-kpis").innerHTML = kpis.map((k, i) =>
-    `<div class="kpi" onclick="copyKPI('${esc(k.label)}','${esc(k.val)}',this)">
-      <div class="kpi-label">${k.label}</div>
-      <div class="kpi-val" style="${k.color ? `color:${k.color}` : ""}">${k.val}</div>
+  document.getElementById("d-kpis").innerHTML = kpis.map(k =>
+    `<div class="kpi" onclick="copyKPI('${esc(k.l)}','${esc(k.v)}',this)">
+      <div class="kpi-label">${k.l}</div>
+      <div class="kpi-val" ${k.color?`style="color:${k.color}"`:""} >${k.v}</div>
       ${k.sub ? `<div class="kpi-sub">${k.sub}</div>` : ""}
     </div>`
   ).join("");
 }
 
-function renderFacts(company, wdata, mgmt) {
+function renderFacts(company, wd, mgmt) {
   const rows = [
-    ["Ticker", company.ticker !== "-" ? `${company.ticker} (${company.exchange})` : "Nicht gelistet"],
+    ["Ticker",    company.ticker!=="-"?`${company.ticker} (${company.exchange})`:"Nicht gelistet"],
     ["Hauptsitz", company.hq || company.country],
-    ["Land", `${FLAGS[company.country]||""} ${company.country}`],
-    ["Branche", company.sector],
-    ["Index", (company.index||[]).join(", ")],
-    ["Gegründet", wdata?.founded || company.founded || "–"],
-    ["Mitarbeiter (DE)", mgmt?.fullTimeEmployees ? Number(mgmt.fullTimeEmployees).toLocaleString("de-DE") : (company.employees ? Number(company.employees).toLocaleString("de-DE") : "–")],
-    ["Website", mgmt?.website ? `<a href="${mgmt.website}" target="_blank">${mgmt.website}</a>` : (wdata?.website ? `<a href="${wdata.website}" target="_blank">${wdata.website}</a>` : "–")],
-    ["ISIN", wdata?.isin || "–"],
-    ["LEI", wdata?.lei || "–"],
-    ["Wikipedia", `<a href="https://en.wikipedia.org/wiki/${company.wikipedia}" target="_blank">📖 ${company.wikipedia?.replace(/_/g," ")}</a>`],
+    ["Land",      `${FLAGS[company.country]||""} ${company.country}`],
+    ["Branche",   company.sector],
+    ["Index",     (company.index||[]).join(", ")],
+    ["Gegründet", wd?.founded || company.founded || "–"],
+    ["Mitarbeiter",mgmt?.fullTimeEmployees
+      ? Number(mgmt.fullTimeEmployees).toLocaleString("de-DE")
+      : company.employees ? Number(company.employees).toLocaleString("de-DE") : "–"],
+    ["Website",   mgmt?.website ? `<a href="${mgmt.website}" target="_blank">${mgmt.website.replace(/^https?:\/\//,"")}</a>`
+                                : (wd?.website ? `<a href="${wd.website}" target="_blank">${wd.website.replace(/^https?:\/\//,"")}</a>` : "–")],
+    ["ISIN",      wd?.isin  || "–"],
+    ["LEI",       wd?.lei   || "–"],
+    ["Wikipedia", `<a href="https://en.wikipedia.org/wiki/${company.wikipedia}" target="_blank">📖 ${(company.wikipedia||"–").replace(/_/g," ")}</a>`],
   ];
-  document.getElementById("d-facts").innerHTML = rows.map(([l, v]) =>
+  document.getElementById("d-facts").innerHTML = rows.map(([l,v]) =>
     `<tr class="cf" onclick="copyTR('${esc(l)}','${esc(v)}',this)"><td>${l}</td><td>${v}</td></tr>`
   ).join("");
 }
 
 function renderEcosystem(company) {
-  const regions = (company.tradeRegions || []).map(r =>
+  const regions = (company.tradeRegions||[]).map(r =>
     `<span class="region-pill">${TRADE_REGION_ICONS[r]||""} ${r}</span>`
   ).join("");
-  const sectors = `<div style="margin-top:10px"><span style="font-size:11px;font-weight:700;color:var(--text3)">BRANCHE</span><div style="margin-top:6px;font-size:14px">${SECTOR_ICONS[company.sector]||""} ${company.sector}</div></div>`;
-  const unlisted = company.unlisted ? `<div style="margin-top:10px;padding:8px 12px;background:var(--amber-bg);border-radius:var(--r-xs);font-size:12px;color:var(--amber)">⚠️ Nicht börsennotiert – Kursdaten nicht verfügbar. Finanzdaten ggf. aus öffentlichen Quellen.</div>` : "";
-  document.getElementById("d-eco").innerHTML = `<div><span style="font-size:11px;font-weight:700;color:var(--text3)">HANDELSZONEN</span><div style="margin-top:6px">${regions || "–"}</div></div>${sectors}${unlisted}`;
+  document.getElementById("d-eco").innerHTML =
+    `<div><span style="font-size:11px;font-weight:700;color:var(--text3)">HANDELSZONEN</span>
+     <div style="margin-top:6px">${regions||"–"}</div></div>
+     <div style="margin-top:10px"><span style="font-size:11px;font-weight:700;color:var(--text3)">BRANCHE</span>
+     <div style="margin-top:6px;font-size:14px">${SECTOR_ICONS[company.sector]||""} ${company.sector}</div></div>
+     ${company.unlisted ? `<div style="margin-top:10px;padding:8px 12px;background:var(--amber-bg);border-radius:var(--r-xs);font-size:12px;color:var(--amber)">⚠️ Nicht börsennotiert – Kursdaten nicht verfügbar.</div>` : ""}`;
 }
 
 function renderCompetitors(company) {
-  const comps = (company.competitors || []).map(id => {
+  const html = (company.competitors||[]).map(id => {
     const c = COMPANY_MAP[id];
-    const label = c ? `${FLAGS[c.country]||""} ${c.name}` : id;
-    return `<button class="comp-chip" onclick="openDetail('${id}')" title="${label}">${label}</button>`;
+    return c
+      ? `<button class="comp-chip" onclick="openDetail('${id}')">${FLAGS[c.country]||""} ${c.name}</button>`
+      : `<span class="comp-chip">${id}</span>`;
   }).join("");
-  document.getElementById("d-comps").innerHTML = comps || `<span style="color:var(--text3);font-size:13px">–</span>`;
+  document.getElementById("d-comps").innerHTML = html || `<span style="color:var(--text3);font-size:13px">–</span>`;
 }
 
 function renderWikiContent(wiki) {
   const el = document.getElementById("d-wiki");
-  const srcEl = document.getElementById("d-wiki-src");
   if (wiki?.extract) {
     el.innerHTML = `<div class="wiki-block" onclick="copyWiki('${esc(wiki.extract)}',this)">
       ${wiki.extract}
       <span class="wiki-hint">📋 Klicken zum Kopieren · <a href="${wiki.url}" target="_blank" onclick="event.stopPropagation()">Wikipedia öffnen</a></span>
     </div>`;
-    if (srcEl) srcEl.textContent = `(${wiki.lang === "de" ? "Deutsch" : "Englisch"})`;
+    document.getElementById("d-wiki-src").textContent = `(${wiki.lang==="de"?"Deutsch":"Englisch"})`;
   } else {
-    el.innerHTML = `<span style="color:var(--text3);font-size:13px">Kein Wikipedia-Eintrag gefunden.</span>`;
+    el.innerHTML = `<span style="color:var(--text3);font-size:13px">Kein Wikipedia-Eintrag im letzten Daten-Update gefunden.</span>`;
   }
 }
 
-function renderManagement(mgmt, company) {
+function renderManagement(mgmt) {
   const el = document.getElementById("d-mgmt");
-  const officers = mgmt?.officers?.length ? mgmt.officers : [];
-  if (!officers.length) { el.innerHTML = `<span style="color:var(--text3);font-size:13px">Keine Management-Daten verfügbar.</span>`; return; }
-  el.innerHTML = `<div class="officers-list">${officers.map(o =>
+  if (!mgmt?.officers?.length) {
+    el.innerHTML = `<span style="color:var(--text3);font-size:13px">Keine Management-Daten verfügbar.</span>`;
+    return;
+  }
+  el.innerHTML = `<div class="officers-list">${mgmt.officers.map(o =>
     `<div class="officer-row">
-      <span class="officer-title">${o.title || "–"}</span>
-      <span class="officer-name">${o.name || "–"}</span>
-      ${o.pay ? `<span class="officer-pay">${fmtNum(o.pay, "")} USD</span>` : ""}
+      <span class="officer-title">${o.title||"–"}</span>
+      <span class="officer-name">${o.name||"–"}</span>
+      ${o.pay?`<span class="officer-pay">${fmtNum(o.pay,"")} USD</span>`:""}
     </div>`
   ).join("")}</div>`;
 }
 
-function renderFinancials(company, quote, fin, mgmt) {
+function renderFinancials(company, quote, fin) {
   const cur = quote?.currency || "";
-  const el = document.getElementById("d-fin-content");
-  if (!fin) { el.innerHTML = `<span style="color:var(--text3);font-size:13px">${company.unlisted ? "Keine Börsendaten verfügbar (nicht gelistet)." : "Keine Finanzdaten verfügbar."}</span>`; return; }
-
+  const el  = document.getElementById("d-fin-content");
+  if (!fin) {
+    el.innerHTML = `<span style="color:var(--text3);font-size:13px">${company.unlisted?"Keine Börsendaten (nicht gelistet).":"Keine Finanzdaten verfügbar."}</span>`;
+    return;
+  }
   const sections = [
-    {
-      title: "💰 Ertragskennzahlen", rows: [
-        ["Umsatz (trailing 12M)", fmtNum(fin.revenue, cur)],
-        ["Umsatzwachstum", fmtPct(fin.revenueGrowth)],
-        ["Rohertrag", fmtNum(fin.grossProfit, cur)],
-        ["Rohmarge", fmtPct(fin.grossMargin)],
-        ["EBITDA", fmtNum(fin.ebitda, cur)],
-        ["EBITDA-Marge", fmtPct(fin.ebitdaMargin)],
-        ["EBIT-Marge (Op. Marge)", fmtPct(fin.operatingMargin)],
-        ["Nettogewinn", fmtNum(fin.netIncome, cur)],
-        ["Nettomarge", fmtPct(fin.netMargin)],
-        ["F&E Investitionen", fmtNum(fin.rdInvestment, cur)],
-        ["Effektive Steuerquote", fmtPct(fin.taxRate)],
-      ]
-    },
-    {
-      title: "📊 Bewertung", rows: [
-        ["Marktkapitalisierung", fmtNum(fin.marketCap, cur)],
-        ["Enterprise Value", fmtNum(fin.enterpriseValue, cur)],
-        ["KGV (trailing)", fmtX(fin.peRatio)],
-        ["KGV (forward)", fmtX(fin.peForward)],
-        ["KBV (P/B)", fmtX(fin.pbRatio)],
-        ["KUV (P/S)", fmtX(fin.psRatio)],
-        ["EV/Umsatz", fmtX(fin.evRevenue)],
-        ["EV/EBITDA", fmtX(fin.evEbitda)],
-        ["EPS (trailing)", fin.eps ? `${fin.eps.toFixed(2)} ${cur}` : "–"],
-        ["EPS (forward)", fin.epsForward ? `${fin.epsForward.toFixed(2)} ${cur}` : "–"],
-        ["Beta", fin.beta?.toFixed(2) || "–"],
-        ["Aktien ausstehend", fmtNum(fin.sharesOutstanding)],
-        ["Leerverkaufsquote", fmtPct(fin.shortFloat)],
-      ]
-    },
-    {
-      title: "💸 Dividende & Cash", rows: [
-        ["Dividendenrendite", fmtPct(fin.dividendYield)],
-        ["Dividende je Aktie", fin.dividendRate ? `${fin.dividendRate.toFixed(2)} ${cur}` : "–"],
-        ["Ausschüttungsquote", fmtPct(fin.payoutRatio)],
-        ["Free Cashflow", fmtNum(fin.freeCashFlow, cur)],
-        ["Operativer Cashflow", fmtNum(fin.operatingCashFlow, cur)],
-      ]
-    },
-    {
-      title: "⚖️ Bilanz & Kapitalstruktur", rows: [
-        ["Fremdkapitalquote (D/E)", fin.debtToEquity ? fin.debtToEquity.toFixed(2) : "–"],
-        ["Current Ratio", fin.currentRatio?.toFixed(2) || "–"],
-        ["Quick Ratio", fin.quickRatio?.toFixed(2) || "–"],
-        ["Eigenkapitalrendite (ROE)", fmtPct(fin.roe)],
-        ["Gesamtkapitalrendite (ROA)", fmtPct(fin.roa)],
-      ]
-    },
-    {
-      title: "🔭 Analysten", rows: [
-        ["Empfehlung", fin.analystRating || "–"],
-        ["Ø Kursziel", fin.targetPrice ? `${fin.targetPrice.toFixed(2)} ${cur}` : "–"],
-        ["Kursziel Hoch", fin.targetHigh ? `${fin.targetHigh.toFixed(2)} ${cur}` : "–"],
-        ["Kursziel Tief", fin.targetLow ? `${fin.targetLow.toFixed(2)} ${cur}` : "–"],
-        ["Anzahl Analysten", fin.numAnalysts || "–"],
-      ]
-    }
+    { title:"💰 Ertragskennzahlen", rows:[
+      ["Umsatz (trailing 12M)",     fmtNum(fin.revenue,cur)],
+      ["Umsatzwachstum",            fmtPct(fin.revenueGrowth)],
+      ["Rohertrag",                 fmtNum(fin.grossProfit,cur)],
+      ["Rohmarge",                  fmtPct(fin.grossMargin)],
+      ["EBITDA",                    fmtNum(fin.ebitda,cur)],
+      ["EBITDA-Marge",              fmtPct(fin.ebitdaMargin)],
+      ["EBIT-Marge",                fmtPct(fin.operatingMargin)],
+      ["Nettogewinn",               fmtNum(fin.netIncome,cur)],
+      ["Nettomarge",                fmtPct(fin.netMargin)],
+      ["F&amp;E Investitionen",     fmtNum(fin.rdInvestment,cur)],
+      ["Effektive Steuerquote",     fmtPct(fin.taxRate)],
+    ]},
+    { title:"📊 Bewertung", rows:[
+      ["Marktkapitalisierung",      fmtNum(fin.marketCap,cur)],
+      ["Enterprise Value",          fmtNum(fin.enterpriseValue,cur)],
+      ["KGV (trailing)",            fmtX(fin.peRatio)],
+      ["KGV (forward)",             fmtX(fin.peForward)],
+      ["KBV (P/B)",                 fmtX(fin.pbRatio)],
+      ["KUV (P/S)",                 fmtX(fin.psRatio)],
+      ["EV/Umsatz",                 fmtX(fin.evRevenue)],
+      ["EV/EBITDA",                 fmtX(fin.evEbitda)],
+      ["EPS (trailing)",            fin.eps ? `${fin.eps.toFixed(2)} ${cur}` : "–"],
+      ["EPS (forward)",             fin.epsForward ? `${fin.epsForward.toFixed(2)} ${cur}` : "–"],
+      ["Beta",                      fin.beta?.toFixed(2) || "–"],
+      ["Aktien ausstehend",         fmtNum(fin.sharesOutstanding)],
+      ["Leerverkaufsquote",         fmtPct(fin.shortFloat)],
+    ]},
+    { title:"💸 Dividende &amp; Cash", rows:[
+      ["Dividendenrendite",         fmtPct(fin.dividendYield)],
+      ["Dividende je Aktie",        fin.dividendRate ? `${fin.dividendRate.toFixed(2)} ${cur}` : "–"],
+      ["Ausschüttungsquote",        fmtPct(fin.payoutRatio)],
+      ["Free Cashflow",             fmtNum(fin.freeCashFlow,cur)],
+      ["Operativer Cashflow",       fmtNum(fin.operatingCashFlow,cur)],
+    ]},
+    { title:"⚖️ Bilanz &amp; Kapital", rows:[
+      ["Fremdkapitalquote (D/E)",   fin.debtToEquity?.toFixed(2) || "–"],
+      ["Current Ratio",             fin.currentRatio?.toFixed(2) || "–"],
+      ["Quick Ratio",               fin.quickRatio?.toFixed(2) || "–"],
+      ["EK-Rendite (ROE)",          fmtPct(fin.roe)],
+      ["GK-Rendite (ROA)",          fmtPct(fin.roa)],
+    ]},
+    { title:"🔭 Analysten", rows:[
+      ["Empfehlung",                fin.analystRating || "–"],
+      ["Ø Kursziel",                fin.targetPrice ? `${fin.targetPrice.toFixed(2)} ${cur}` : "–"],
+      ["Kursziel Hoch",             fin.targetHigh  ? `${fin.targetHigh.toFixed(2)} ${cur}`  : "–"],
+      ["Kursziel Tief",             fin.targetLow   ? `${fin.targetLow.toFixed(2)} ${cur}`   : "–"],
+      ["Anzahl Analysten",          fin.numAnalysts || "–"],
+    ]},
   ];
-
   el.innerHTML = sections.map(s => `
     <div class="sec-title" style="margin-bottom:8px">${s.title}</div>
     <table class="dtable" style="margin-bottom:18px">
-      ${s.rows.filter(r => r[1] !== "–").map(([l,v]) =>
+      ${s.rows.filter(r=>r[1]!=="–").map(([l,v])=>
         `<tr class="cf" onclick="copyTR('${esc(l)}','${esc(v)}',this)"><td>${l}</td><td>${v}</td></tr>`
       ).join("")}
     </table>
   `).join("");
 }
 
-async function renderChartTab(company, quote) {
+function renderChartPane(company, quote, hist) {
   document.getElementById("d-chart-cur").textContent = quote?.currency ? `(${quote.currency})` : "";
-  document.getElementById("d-chart-msg").textContent = "";
-  if (company.unlisted || !company.ticker || company.ticker === "-") {
-    document.getElementById("d-chart-msg").textContent = "Kein Ticker – Kurschart nicht verfügbar.";
+  const msg = document.getElementById("d-chart-msg");
+  if (!hist) {
+    msg.textContent = company.unlisted ? "Nicht gelistet – kein Kurschart." : "Keine Kursdaten in letztem Fetch.";
     return;
   }
-  const hist = await API.getPriceHistory(company.ticker);
-  if (!hist) { document.getElementById("d-chart-msg").textContent = "Kursdaten konnten nicht geladen werden."; return; }
-  detailData.hist = hist;
+  msg.textContent = "";
+  // Will render when tab activated (Charts.renderPriceChart)
   Charts.renderPriceChart("price-chart", hist, quote);
 }
 
-function renderHistoryTab(company, fin) {
+function renderHistoryPane(company, fin, quote) {
+  const cur = quote?.currency || "";
   if (!fin?.annualIS?.length) {
-    document.getElementById("d-history-table").innerHTML = `<span style="color:var(--text3);font-size:13px">Keine historischen Daten verfügbar.</span>`;
+    document.getElementById("d-history-table").innerHTML = `<span style="color:var(--text3);font-size:13px">Keine historischen Daten.</span>`;
     return;
   }
-  const cur = detailData.quote?.currency || "";
   Charts.renderAnnualChart("annual-chart", fin.annualIS, cur);
   Charts.renderQuarterlyChart("quarterly-chart", fin.quarterlyNI, cur);
-
   const years = [...fin.annualIS].reverse();
-  const hdr = `<tr>${["Jahr","Umsatz","Rohertrag","Rohmarge","EBIT","Nettogewinn","F&E"].map(h => `<th style="text-align:left;padding:6px 8px;font-size:11px;font-weight:700;color:var(--text3);border-bottom:2px solid var(--border)">${h}</th>`).join("")}</tr>`;
-  const rows2 = years.map(y => {
-    const gm = y.revenue && y.grossProfit ? ((y.grossProfit / y.revenue) * 100).toFixed(1) + "%" : "–";
-    return `<tr class="cf" style="font-size:12px">
+  const hdr = ["Jahr","Umsatz","Rohertrag","Rohmarge","EBIT","Nettogewinn","F&E"]
+    .map(h=>`<th style="text-align:left;padding:6px 8px;font-size:11px;font-weight:700;color:var(--text3);border-bottom:2px solid var(--border)">${h}</th>`)
+    .join("");
+  const rows = years.map(y => {
+    const gm = y.revenue&&y.grossProfit ? ((y.grossProfit/y.revenue)*100).toFixed(1)+"%" : "–";
+    return `<tr style="font-size:12px">
       <td style="padding:6px 8px;border-bottom:1px solid var(--border);font-weight:600">${y.date?.substring(0,4)||"–"}</td>
-      <td style="padding:6px 8px;border-bottom:1px solid var(--border)">${fmtNum(y.revenue, cur)}</td>
-      <td style="padding:6px 8px;border-bottom:1px solid var(--border)">${fmtNum(y.grossProfit, cur)}</td>
+      <td style="padding:6px 8px;border-bottom:1px solid var(--border)">${fmtNum(y.revenue,cur)}</td>
+      <td style="padding:6px 8px;border-bottom:1px solid var(--border)">${fmtNum(y.grossProfit,cur)}</td>
       <td style="padding:6px 8px;border-bottom:1px solid var(--border)">${gm}</td>
-      <td style="padding:6px 8px;border-bottom:1px solid var(--border)">${fmtNum(y.ebit, cur)}</td>
-      <td style="padding:6px 8px;border-bottom:1px solid var(--border);color:${(y.netIncome||0)>=0?'var(--green)':'var(--red)'}">${fmtNum(y.netIncome, cur)}</td>
-      <td style="padding:6px 8px;border-bottom:1px solid var(--border)">${fmtNum(y.rd, cur)}</td>
+      <td style="padding:6px 8px;border-bottom:1px solid var(--border)">${fmtNum(y.ebit,cur)}</td>
+      <td style="padding:6px 8px;border-bottom:1px solid var(--border);color:${(y.netIncome||0)>=0?"var(--green)":"var(--red)"}">${fmtNum(y.netIncome,cur)}</td>
+      <td style="padding:6px 8px;border-bottom:1px solid var(--border)">${fmtNum(y.rd,cur)}</td>
     </tr>`;
   }).join("");
-  document.getElementById("d-history-table").innerHTML = `<table class="dtable" style="font-size:12px"><thead>${hdr}</thead><tbody>${rows2}</tbody></table>`;
+  document.getElementById("d-history-table").innerHTML =
+    `<table class="dtable"><thead><tr>${hdr}</tr></thead><tbody>${rows}</tbody></table>`;
 }
 
-function renderOwnershipTab(own) {
+function renderOwnershipPane(own) {
   if (!own) {
     document.getElementById("d-investors").innerHTML = `<span style="color:var(--text3);font-size:13px">Keine Daten verfügbar.</span>`;
     return;
   }
   Charts.renderOwnershipChart("ownership-chart", own);
-  const rows = (own.topInstitutions || []).map(i =>
+  const rows = (own.topInstitutions||[]).map(i =>
     `<tr class="cf" onclick="copyTR('${esc(i.name)}','${fmtPct(i.pct)}',this)">
       <td style="font-size:12px">${i.name}</td>
       <td style="font-size:12px;font-weight:600">${fmtPct(i.pct)}</td>
-      <td style="font-size:11px;color:var(--text3)">${i.change !== undefined ? (i.change > 0 ? `▲ +${fmtPct(i.change)}` : `▼ ${fmtPct(i.change)}`) : ""}</td>
+      <td style="font-size:11px;color:var(--text3)">${i.change!==undefined?(i.change>0?`▲ +${fmtPct(i.change)}`:`▼ ${fmtPct(i.change)}`):""}</td>
     </tr>`
   ).join("");
-  document.getElementById("d-investors").innerHTML = rows ? `<table class="dtable">${rows}</table>` : `<span style="color:var(--text3);font-size:13px">–</span>`;
+  document.getElementById("d-investors").innerHTML = rows
+    ? `<table class="dtable">${rows}</table>`
+    : `<span style="color:var(--text3);font-size:13px">–</span>`;
 }
 
-function renderNews(news) {
+function renderNewsPane(news, fetchedAt) {
   const el = document.getElementById("d-news");
-  if (!news?.length) { el.innerHTML = `<span style="color:var(--text3);font-size:13px">Keine Nachrichten gefunden.</span>`; return; }
+  if (fetchedAt) {
+    const dt = new Date(fetchedAt);
+    document.getElementById("d-news-age").textContent = `Stand: ${dt.toLocaleString("de-DE")}`;
+  }
+  if (!news?.length) {
+    el.innerHTML = `<span style="color:var(--text3);font-size:13px">Keine Nachrichten im letzten Daten-Update.</span>`;
+    return;
+  }
   el.innerHTML = `<div class="news-list">${news.map(n =>
     `<a class="news-item" href="${n.link}" target="_blank" rel="noopener">
       <div class="news-title">${n.title}</div>
-      <div class="news-meta">${n.date}${n.source ? " · " + n.source : ""}</div>
-      ${n.desc ? `<div class="news-desc">${n.desc}</div>` : ""}
+      <div class="news-meta">${n.date}${n.source?" · "+n.source:""}</div>
+      ${n.desc?`<div class="news-desc">${n.desc}</div>`:""}
     </a>`
   ).join("")}</div>`;
 }
 
-function renderReports(company) {
-  const links = API.getIRLinks(company);
+function renderReportsPane(company) {
+  const yr = new Date().getFullYear() - 1;
+  const links = [
+    company.country === "US" && { icon:"📄", label:"SEC EDGAR (10-K/10-Q)", url:`https://www.sec.gov/cgi-bin/browse-edgar?company=${encodeURIComponent(company.name)}&action=getcompany&type=10-K` },
+    company.country === "DE" && { icon:"🏛️", label:"Bundesanzeiger", url:`https://www.bundesanzeiger.de/pub/de/search?fulltext=${encodeURIComponent(company.name)}` },
+    company.country === "DE" && { icon:"📡", label:"DGAP / EQS", url:`https://dgap.de/dgap/Public/search/?q=${encodeURIComponent(company.name)}` },
+    { icon:"🔍", label:`Geschäftsbericht ${yr}`, url:`https://www.google.com/search?q=${encodeURIComponent(company.name)}+Gesch%C3%A4ftsbericht+${yr}+PDF` },
+    { icon:"🔍", label:`Annual Report ${yr}`, url:`https://www.google.com/search?q=${encodeURIComponent(company.name)}+annual+report+${yr}+PDF` },
+    company.ticker !== "-" && { icon:"📈", label:"Yahoo Finance", url:`https://finance.yahoo.com/quote/${company.ticker}` },
+    company.wikipedia && { icon:"📖", label:"Wikipedia", url:`https://en.wikipedia.org/wiki/${company.wikipedia}` },
+  ].filter(Boolean);
   document.getElementById("d-reports").innerHTML = links.map(l =>
     `<a class="ir-link" href="${l.url}" target="_blank" rel="noopener">${l.icon} ${l.label}</a>`
   ).join("");
 }
 
-function renderCacheAge(company) {
-  const age = Cache.age(`quote_${company.ticker}`);
+function renderCacheAge(fetchedAt) {
   const el = document.getElementById("d-cache");
-  if (el && age) el.textContent = `⏱ Aktualisiert vor ${age}`;
+  if (!el || !fetchedAt) return;
+  const dt = new Date(fetchedAt);
+  const diffH = Math.round((Date.now() - dt) / 3600000);
+  el.textContent = `⏱ Stand: ${dt.toLocaleString("de-DE")} (${diffH < 1 ? "< 1h" : diffH + "h"} alt)`;
 }
 
-// ── Copy ──────────────────────────────────────────────────────
-function copyKPI(l, v, el) {
-  navigator.clipboard.writeText(`${l}: ${v}`).then(() => { el.classList.add("copied"); toast("Kopiert!"); setTimeout(() => el.classList.remove("copied"), 1500); });
-}
-function copyTR(l, v, tr) {
-  const clean = v.replace(/<[^>]*>/g, "");
-  navigator.clipboard.writeText(`${l}: ${clean}`).then(() => { tr.classList.add("copied"); toast("Kopiert!"); setTimeout(() => tr.classList.remove("copied"), 1500); });
-}
-function copyWiki(text, el) {
-  navigator.clipboard.writeText(text).then(() => { el.style.borderLeftColor = "var(--green)"; toast("Kopiert!"); setTimeout(() => el.style.borderLeftColor = "", 1500); });
-}
-function toast(msg) {
-  const t = document.getElementById("toast"); t.textContent = msg; t.classList.add("show");
-  setTimeout(() => t.classList.remove("show"), 1800);
-}
+// ── Copy helpers ──────────────────────────────────────────────
+function copyKPI(l,v,el){navigator.clipboard.writeText(`${l}: ${v}`).then(()=>{el.classList.add("copied");toast("Kopiert!");setTimeout(()=>el.classList.remove("copied"),1500)});}
+function copyTR(l,v,tr){const c=v.replace(/<[^>]*>/g,"");navigator.clipboard.writeText(`${l}: ${c}`).then(()=>{tr.classList.add("copied");toast("Kopiert!");setTimeout(()=>tr.classList.remove("copied"),1500)});}
+function copyWiki(text,el){navigator.clipboard.writeText(text).then(()=>{el.style.borderLeftColor="var(--green)";toast("Kopiert!");setTimeout(()=>el.style.borderLeftColor="",1500)});}
+function toast(msg){const t=document.getElementById("toast");t.textContent=msg;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),1800);}
 
 // ── Export ────────────────────────────────────────────────────
 async function doExport(type) {
   if (!current) return;
-  const { wiki, quote, fin, mgmt } = detailData;
+  const { fin, quote, mgmt, wiki } = detailData;
   const notes = document.getElementById("notes-area").value;
   const btn = document.getElementById("btn-" + type);
   const orig = btn?.textContent || "";
   if (btn) btn.textContent = "⏳";
   try {
-    if (type === "md") { await Exporter.copyMarkdown(current, wiki, quote, fin, mgmt, notes, lang); toast("Markdown kopiert!"); if (btn) { btn.textContent = "✅"; btn.classList.add("ok"); } }
-    else if (type === "pdf") { Exporter.printPDF(current, wiki, quote, fin, mgmt, notes, lang); if (btn) btn.textContent = "✅"; }
-    else if (type === "docx") { await Exporter.exportDOCX(current, wiki, quote, fin, mgmt, notes, lang); if (btn) btn.textContent = "✅"; }
+    if (type === "md")   { await Exporter.copyMarkdown(current, wiki, quote, fin, mgmt, notes, lang); toast("Markdown kopiert!"); }
+    else if (type === "pdf")  { Exporter.printPDF(current, wiki, quote, fin, mgmt, notes, lang); }
+    else if (type === "docx") { await Exporter.exportDOCX(current, wiki, quote, fin, mgmt, notes, lang); }
+    if (btn) { btn.textContent = "✅"; btn.classList.add("ok"); }
   } catch(e) { if (btn) btn.textContent = "❌"; console.error(e); }
   setTimeout(() => { if (btn) { btn.textContent = orig; btn.classList.remove("ok"); } }, 2500);
 }
 
-// ── Close / Overlay ───────────────────────────────────────────
-function closeDetail() {
-  document.getElementById("overlay").classList.remove("open");
-  document.body.style.overflow = "";
-  current = null;
-}
-function overlayClick(e) { if (e.target === document.getElementById("overlay")) closeDetail(); }
-document.addEventListener("keydown", e => { if (e.key === "Escape") closeDetail(); });
+// ── Close ─────────────────────────────────────────────────────
+function closeDetail(){document.getElementById("overlay").classList.remove("open");document.body.style.overflow="";current=null;}
+function overlayClick(e){if(e.target===document.getElementById("overlay"))closeDetail();}
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeDetail();});
 
 // ── Lang / Theme ──────────────────────────────────────────────
-function setLang(l) {
-  lang = l; localStorage.setItem("cp2_lang", l);
-  document.getElementById("l-de").classList.toggle("active", l === "de");
-  document.getElementById("l-en").classList.toggle("active", l === "en");
-  document.documentElement.lang = l;
-}
-function applyLang() { setLang(lang); }
-function toggleTheme() {
-  theme = theme === "light" ? "dark" : "light";
-  localStorage.setItem("cp2_theme", theme); applyTheme();
-  // re-render open charts
-  if (current && detailData.hist) Charts.renderPriceChart("price-chart", detailData.hist, detailData.quote);
-  if (current && detailData.fin) {
-    Charts.renderAnnualChart("annual-chart", detailData.fin.annualIS, detailData.quote?.currency);
-    Charts.renderQuarterlyChart("quarterly-chart", detailData.fin.quarterlyNI, detailData.quote?.currency);
-  }
-  if (current && detailData.own) Charts.renderOwnershipChart("ownership-chart", detailData.own);
-}
-function applyTheme() { document.documentElement.setAttribute("data-theme", theme); }
+function setLang(l){lang=l;localStorage.setItem("cp_lang",l);document.getElementById("l-de").classList.toggle("active",l==="de");document.getElementById("l-en").classList.toggle("active",l==="en");document.documentElement.lang=l;}
+function applyLang(){setLang(lang);}
+function toggleTheme(){theme=theme==="light"?"dark":"light";localStorage.setItem("cp_theme",theme);applyTheme();if(current&&detailData.hist)Charts.renderPriceChart("price-chart",detailData.hist,detailData.quote);if(current&&detailData.fin){const cur=detailData.quote?.currency||"";Charts.renderAnnualChart("annual-chart",detailData.fin.annualIS,cur);Charts.renderQuarterlyChart("quarterly-chart",detailData.fin.quarterlyNI,cur);}if(current&&detailData.own)Charts.renderOwnershipChart("ownership-chart",detailData.own);}
+function applyTheme(){document.documentElement.setAttribute("data-theme",theme);}
 
-// ── Escape helper ─────────────────────────────────────────────
-function esc(s) { return String(s || "").replace(/'/g, "\\'").replace(/"/g,"&quot;").replace(/<[^>]*>/g,"").substring(0, 400); }
+// ── Formatters (inline to avoid separate file dependency) ─────
+function fmtNum(n,cur="",compact=true){if(n===null||n===undefined||isNaN(n))return"–";n=Number(n);let s;if(compact){const a=Math.abs(n);if(a>=1e12)s=(n/1e12).toFixed(2)+" Bio.";else if(a>=1e9)s=(n/1e9).toFixed(2)+" Mrd.";else if(a>=1e6)s=(n/1e6).toFixed(2)+" Mio.";else s=n.toLocaleString("de-DE",{maximumFractionDigits:0})}else{s=n.toLocaleString("de-DE");}return cur?`${s} ${cur}`:s;}
+function fmtPct(n,d=1){if(n===null||n===undefined||isNaN(n))return"–";return(Number(n)*100).toFixed(d)+"%";}
+function fmtX(n,d=1){if(n===null||n===undefined||isNaN(n))return"–";return Number(n).toFixed(d)+"x";}
+function esc(s){return String(s||"").replace(/'/g,"\\'").replace(/"/g,"&quot;").replace(/<[^>]*>/g,"").substring(0,400);}
+
+// ── Start ─────────────────────────────────────────────────────
+boot();
 </script>
 </body>
 </html>
