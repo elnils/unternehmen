@@ -1,204 +1,199 @@
-// Export module – Clipboard (Markdown), PDF (via print), DOCX (via docx.js)
+// Export module – Markdown (clipboard), PDF (print window), DOCX (docx.js)
 
 const Exporter = {
 
-  // ── Build text profile from loaded data ──────────────────────
-  buildMarkdown(company, wiki, quote, fin, lang) {
-    const t = lang === "de" ? {
-      profile: "Unternehmensprofil",
-      country: "Land", sector: "Branche", exchange: "Börse",
-      ticker: "Ticker", index: "Index",
-      price: "Aktienkurs", change: "Veränderung", mktcap: "Marktkapitalisierung",
-      high52: "52W-Hoch", low52: "52W-Tief",
-      revenue: "Umsatz", netincome: "Nettogewinn", ebit: "Operatives Ergebnis",
-      eps: "Gewinn je Aktie", pe: "KGV", pb: "KBV",
-      margin: "Op. Marge", roe: "Eigenkapitalrendite", div: "Dividendenrendite",
-      fcf: "Free Cashflow", debt: "Verschuldungsgrad (D/E)",
-      analysts: "Analystenurteil", target: "Kursziel",
-      about: "Über das Unternehmen",
-      generatedAt: "Erstellt am",
-    } : {
-      profile: "Company Profile",
-      country: "Country", sector: "Sector", exchange: "Exchange",
-      ticker: "Ticker", index: "Index",
-      price: "Share Price", change: "Change", mktcap: "Market Cap",
-      high52: "52W High", low52: "52W Low",
-      revenue: "Revenue", netincome: "Net Income", ebit: "Operating Income",
-      eps: "EPS", pe: "P/E", pb: "P/B",
-      margin: "Op. Margin", roe: "Return on Equity", div: "Dividend Yield",
-      fcf: "Free Cash Flow", debt: "Debt/Equity",
-      analysts: "Analyst Rating", target: "Price Target",
-      about: "About the Company",
-      generatedAt: "Generated at",
-    };
-
-    const flag = FLAGS[company.country] || "";
+  buildText(company, wiki, quote, fin, mgmt, notes, lang) {
+    const L = lang === "de";
     const cur = quote?.currency || "";
-    const sign = quote?.change >= 0 ? "+" : "";
+    const flag = FLAGS[company.country] || "";
+    const sign = v => (v >= 0 ? "+" : "");
 
-    let md = `# ${flag} ${company.name} – ${t.profile}\n\n`;
-    md += `| | |\n|---|---|\n`;
-    md += `| **${t.ticker}** | ${company.ticker} (${company.exchange}) |\n`;
-    md += `| **${t.country}** | ${flag} ${company.country} |\n`;
-    md += `| **${t.sector}** | ${SECTOR_ICONS[company.sector]||""} ${company.sector} |\n`;
-    md += `| **${t.index}** | ${(company.index||[]).join(", ")} |\n`;
+    let out = "";
+    out += `${"=".repeat(60)}\n`;
+    out += `${flag} ${company.name.toUpperCase()}\n`;
+    out += `${L?"Unternehmenssteckbrief":"Company Profile"} | ${new Date().toLocaleDateString("de-DE")}\n`;
+    out += `${"=".repeat(60)}\n\n`;
 
+    // Master data
+    out += `## ${L?"Stammdaten":"Master Data"}\n`;
+    const md = [
+      [L?"Ticker":"Ticker", `${company.ticker} (${company.exchange})`],
+      [L?"Hauptsitz":"Headquarters", company.hq || company.country],
+      [L?"Land":"Country", `${flag} ${company.country}`],
+      [L?"Branche":"Sector", company.sector],
+      [L?"Index":"Index", (company.index||[]).join(", ")],
+      [L?"Gegründet":"Founded", company.founded || "–"],
+      [L?"Mitarbeiter":"Employees", (mgmt?.fullTimeEmployees || company.employees || "–").toLocaleString ? Number(mgmt?.fullTimeEmployees || company.employees || 0).toLocaleString("de-DE") : "–"],
+      [L?"Handelszonen":"Trade Regions", (company.tradeRegions||[]).join(", ")],
+      ["Website", mgmt?.website || "–"],
+      ["Wikipedia", company.wikipedia ? `https://en.wikipedia.org/wiki/${company.wikipedia}` : "–"],
+    ];
+    md.forEach(([l,v]) => { out += `  ${l.padEnd(22)} ${v}\n`; });
+
+    // Officers
+    if (mgmt?.officers?.length) {
+      out += `\n## ${L?"Management":"Management"}\n`;
+      mgmt.officers.forEach(o => {
+        out += `  ${o.title?.padEnd(24) || ""} ${o.name || ""}\n`;
+      });
+    }
+
+    // Competitors
+    if (company.competitors?.length) {
+      const compNames = company.competitors.map(id => COMPANY_MAP[id]?.name || id).join(", ");
+      out += `\n## ${L?"Wettbewerber":"Competitors"}\n  ${compNames}\n`;
+    }
+
+    // Quote
     if (quote) {
-      md += `\n## 📊 ${t.price}\n`;
-      md += `| | |\n|---|---|\n`;
-      md += `| **${t.price}** | ${quote.price} ${cur} |\n`;
-      md += `| **${t.change}** | ${sign}${quote.change?.toFixed(2)} (${sign}${quote.changePct}%) |\n`;
-      if (quote.marketCap) md += `| **${t.mktcap}** | ${formatNum(quote.marketCap, cur)} |\n`;
-      md += `| **${t.high52}** | ${quote.high52} ${cur} |\n`;
-      md += `| **${t.low52}** | ${quote.low52} ${cur} |\n`;
+      out += `\n## ${L?"Aktienkurs":"Share Price"}\n`;
+      [
+        [L?"Kurs":"Price", `${quote.price?.toFixed(2)} ${cur}`],
+        [L?"Veränderung":"Change", `${sign(quote.change)}${quote.change?.toFixed(2)} (${sign(quote.changePct)}${quote.changePct?.toFixed(2)}%)`],
+        [L?"52W Hoch":"52W High", `${quote.high52} ${cur}`],
+        [L?"52W Tief":"52W Low", `${quote.low52} ${cur}`],
+        [L?"Marktkapitalisierung":"Market Cap", fin?.marketCap ? fmtNum(fin.marketCap, cur) : "–"],
+      ].forEach(([l,v]) => { out += `  ${l.padEnd(22)} ${v}\n`; });
     }
 
+    // Financials
     if (fin) {
-      md += `\n## 💼 ${lang === "de" ? "Kennzahlen" : "Key Metrics"}\n`;
-      md += `| | |\n|---|---|\n`;
-      if (fin.revenue) md += `| **${t.revenue}** | ${formatNum(fin.revenue, cur)} |\n`;
-      if (fin.netIncome) md += `| **${t.netincome}** | ${formatNum(fin.netIncome, cur)} |\n`;
-      if (fin.operatingMargin) md += `| **${t.margin}** | ${formatPct(fin.operatingMargin)} |\n`;
-      if (fin.eps) md += `| **${t.eps}** | ${fin.eps?.toFixed(2)} ${cur} |\n`;
-      if (fin.peRatio) md += `| **${t.pe}** | ${fin.peRatio?.toFixed(1)} |\n`;
-      if (fin.pbRatio) md += `| **${t.pb}** | ${fin.pbRatio?.toFixed(2)} |\n`;
-      if (fin.roe) md += `| **${t.roe}** | ${formatPct(fin.roe)} |\n`;
-      if (fin.dividendYield) md += `| **${t.div}** | ${formatPct(fin.dividendYield)} |\n`;
-      if (fin.freeCashFlow) md += `| **${t.fcf}** | ${formatNum(fin.freeCashFlow, cur)} |\n`;
-      if (fin.debtToEquity) md += `| **${t.debt}** | ${fin.debtToEquity?.toFixed(2)} |\n`;
-      if (fin.analystRating) md += `| **${t.analysts}** | ${fin.analystRating} |\n`;
-      if (fin.targetPrice) md += `| **${t.target}** | ${fin.targetPrice?.toFixed(2)} ${cur} |\n`;
+      out += `\n## ${L?"Kennzahlen":"Key Metrics"}\n`;
+      [
+        [L?"Umsatz":"Revenue", fmtNum(fin.revenue, cur)],
+        [L?"Rohertrag":"Gross Profit", fmtNum(fin.grossProfit, cur)],
+        [L?"Rohmarge":"Gross Margin", fmtPct(fin.grossMargin)],
+        ["EBIT Marge", fmtPct(fin.operatingMargin)],
+        [L?"Nettogewinn":"Net Income", fmtNum(fin.netIncome, cur)],
+        [L?"Nettomarge":"Net Margin", fmtPct(fin.netMargin)],
+        [L?"EPS":"EPS", fin.eps ? `${fin.eps.toFixed(2)} ${cur}` : "–"],
+        [L?"KGV (trailing)":"P/E (trailing)", fmtX(fin.peRatio)],
+        [L?"KGV (forward)":"P/E (forward)", fmtX(fin.peForward)],
+        [L?"KBV":"P/B", fmtX(fin.pbRatio)],
+        [L?"EK-Rendite":"ROE", fmtPct(fin.roe)],
+        [L?"Dividendenrendite":"Dividend Yield", fmtPct(fin.dividendYield)],
+        [L?"Free Cashflow":"Free Cash Flow", fmtNum(fin.freeCashFlow, cur)],
+        [L?"Fremdkapitalquote":"Debt/Equity", fin.debtToEquity ? fin.debtToEquity.toFixed(2) : "–"],
+        [L?"Steuerquote":"Tax Rate", fmtPct(fin.taxRate)],
+        [L?"F&E Investitionen":"R&D Spending", fmtNum(fin.rdInvestment, cur)],
+        [L?"Analysten-Urteil":"Analyst Rating", fin.analystRating || "–"],
+        [L?"Kursziel (Ø)":"Avg. Price Target", fin.targetPrice ? `${fin.targetPrice.toFixed(2)} ${cur}` : "–"],
+      ].forEach(([l,v]) => { out += `  ${l.padEnd(26)} ${v}\n`; });
     }
 
+    // Wikipedia
     if (wiki?.extract) {
-      md += `\n## 📖 ${t.about}\n${wiki.extract}\n`;
-      md += `\n*${lang==="de"?"Quelle":"Source"}: ${wiki.url}*\n`;
+      out += `\n## ${L?"Über das Unternehmen":"About the Company"}\n${wiki.extract}\nQuelle: ${wiki.url}\n`;
     }
 
-    md += `\n---\n*${t.generatedAt}: ${new Date().toLocaleString("de-DE")} | company-profiles*\n`;
-    return md;
+    // Notes
+    if (notes?.trim()) {
+      out += `\n## ${L?"Meine Notizen":"My Notes"}\n${notes.trim()}\n`;
+    }
+
+    out += `\n${"–".repeat(60)}\n${L?"Erstellt am":"Generated"}: ${new Date().toLocaleString("de-DE")}\n`;
+    return out;
   },
 
-  // ── Copy Markdown to clipboard ───────────────────────────────
-  async copyMarkdown(company, wiki, quote, fin, lang) {
-    const md = this.buildMarkdown(company, wiki, quote, fin, lang);
-    await navigator.clipboard.writeText(md);
-    return true;
+  async copyMarkdown(company, wiki, quote, fin, mgmt, notes, lang) {
+    const txt = this.buildText(company, wiki, quote, fin, mgmt, notes, lang);
+    await navigator.clipboard.writeText(txt);
   },
 
-  // ── Print-to-PDF ─────────────────────────────────────────────
-  printPDF(company, wiki, quote, fin, lang) {
-    const md = this.buildMarkdown(company, wiki, quote, fin, lang);
-    const win = window.open("", "_blank");
-    win.document.write(`
-      <!DOCTYPE html><html><head>
-      <meta charset="utf-8">
-      <title>${company.name} – Profil</title>
-      <style>
-        body { font-family: 'Segoe UI', sans-serif; max-width: 800px; margin: 40px auto; color: #1a1a2e; font-size: 14px; line-height: 1.6; }
-        h1 { font-size: 22px; border-bottom: 3px solid #4361ee; padding-bottom: 8px; }
-        h2 { font-size: 16px; color: #4361ee; margin-top: 24px; }
-        table { border-collapse: collapse; width: 100%; margin: 12px 0; }
-        td { padding: 6px 10px; border: 1px solid #e0e0e0; }
-        td:first-child { font-weight: 600; width: 40%; background: #f8f9ff; }
-        p { margin: 8px 0; }
-        em { color: #888; font-size: 11px; }
-        @media print { body { margin: 20px; } }
-      </style></head><body>
-      ${mdToHTML(md)}
-      </body></html>
-    `);
-    win.document.close();
-    setTimeout(() => { win.print(); }, 500);
+  printPDF(company, wiki, quote, fin, mgmt, notes, lang) {
+    const txt = this.buildText(company, wiki, quote, fin, mgmt, notes, lang);
+    const w = window.open("", "_blank");
+    const flag = FLAGS[company.country] || "";
+    w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8">
+    <title>${company.name}</title>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600&display=swap');
+      body{font-family:'DM Sans',sans-serif;max-width:800px;margin:40px auto;color:#1a1915;font-size:13px;line-height:1.7}
+      h1{font-size:20px;margin-bottom:4px} h2{font-size:13px;font-weight:700;color:#4361ee;margin:20px 0 6px;text-transform:uppercase;letter-spacing:.5px}
+      pre{font-family:inherit;white-space:pre-wrap;word-break:break-word}
+      hr{border:none;border-top:1px solid #e6e4df;margin:16px 0}
+      @media print{body{margin:20px}}
+    </style></head><body>
+    <h1>${flag} ${company.name}</h1>
+    <hr>
+    <pre>${txt.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}</pre>
+    </body></html>`);
+    w.document.close();
+    setTimeout(() => w.print(), 500);
   },
 
-  // ── DOCX export (via docx.js CDN) ────────────────────────────
-  async exportDOCX(company, wiki, quote, fin, lang) {
+  async exportDOCX(company, wiki, quote, fin, mgmt, notes, lang) {
     if (typeof docx === "undefined") {
-      await loadScript("https://cdnjs.cloudflare.com/ajax/libs/docx/8.5.0/docx.umd.min.js");
+      await new Promise((res, rej) => {
+        const s = document.createElement("script");
+        s.src = "https://cdnjs.cloudflare.com/ajax/libs/docx/8.5.0/docx.umd.min.js";
+        s.onload = res; s.onerror = rej;
+        document.head.appendChild(s);
+      });
     }
-    const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, HeadingLevel, WidthType, AlignmentType, BorderStyle } = docx;
+    const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, HeadingLevel, WidthType, AlignmentType } = docx;
+    const cur = quote?.currency || "";
+    const flag = FLAGS[company.country] || "";
+
+    const mkRow = (label, value) => new TableRow({ children: [
+      new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: label, bold: true, size: 20 })] })], width: { size: 40, type: WidthType.PERCENTAGE } }),
+      new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: String(value ?? "–"), size: 20 })] })], width: { size: 60, type: WidthType.PERCENTAGE } }),
+    ]});
 
     const rows = [];
-    const addRow = (label, value) => {
-      if (!value || value === "–") return;
-      rows.push(new TableRow({ children: [
-        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: label, bold: true, size: 20 })] })], width: { size: 40, type: WidthType.PERCENTAGE } }),
-        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: String(value), size: 20 })] })], width: { size: 60, type: WidthType.PERCENTAGE } }),
-      ]}));
-    };
+    const add = (l, v) => { if (v && v !== "–") rows.push(mkRow(l, v)); };
 
-    const cur = quote?.currency || "";
-    const flag = FLAGS[company.country] || "";
-    const sign = quote?.change >= 0 ? "+" : "";
-
-    addRow("Ticker", `${company.ticker} (${company.exchange})`);
-    addRow("Land", `${flag} ${company.country}`);
-    addRow("Branche", company.sector);
-    addRow("Index", (company.index||[]).join(", "));
+    add("Ticker", `${company.ticker} (${company.exchange})`);
+    add("Hauptsitz", company.hq);
+    add("Land", `${flag} ${company.country}`);
+    add("Branche", company.sector);
+    add("Index", (company.index||[]).join(", "));
+    add("Gegründet", company.founded);
+    add("Mitarbeiter", Number(mgmt?.fullTimeEmployees || company.employees || 0).toLocaleString("de-DE"));
+    add("Handelszonen", (company.tradeRegions||[]).join(", "));
     if (quote) {
-      addRow("Kurs", `${quote.price} ${cur}`);
-      addRow("Veränderung", `${sign}${quote.change?.toFixed(2)} (${sign}${quote.changePct}%)`);
-      if (quote.marketCap) addRow("Marktkapitalisierung", formatNum(quote.marketCap, cur));
-      addRow("52W Hoch / Tief", `${quote.high52} / ${quote.low52} ${cur}`);
+      add("Aktienkurs", `${quote.price?.toFixed(2)} ${cur}`);
+      add("52W Hoch/Tief", `${quote.high52} / ${quote.low52} ${cur}`);
     }
     if (fin) {
-      if (fin.revenue) addRow("Umsatz", formatNum(fin.revenue, cur));
-      if (fin.netIncome) addRow("Nettogewinn", formatNum(fin.netIncome, cur));
-      if (fin.operatingMargin) addRow("Op. Marge", formatPct(fin.operatingMargin));
-      if (fin.eps) addRow("EPS", `${fin.eps?.toFixed(2)} ${cur}`);
-      if (fin.peRatio) addRow("KGV", fin.peRatio?.toFixed(1));
-      if (fin.roe) addRow("Eigenkapitalrendite", formatPct(fin.roe));
-      if (fin.dividendYield) addRow("Dividendenrendite", formatPct(fin.dividendYield));
+      add("Umsatz", fmtNum(fin.revenue, cur));
+      add("Rohmarge", fmtPct(fin.grossMargin));
+      add("EBIT Marge", fmtPct(fin.operatingMargin));
+      add("Nettogewinn", fmtNum(fin.netIncome, cur));
+      add("EPS", fin.eps ? `${fin.eps.toFixed(2)} ${cur}` : null);
+      add("KGV", fmtX(fin.peRatio));
+      add("Eigenkapitalrendite", fmtPct(fin.roe));
+      add("Dividendenrendite", fmtPct(fin.dividendYield));
+      add("Free Cashflow", fmtNum(fin.freeCashFlow, cur));
+      add("Fremdkapitalquote", fin.debtToEquity?.toFixed(2));
+      add("Steuerquote", fmtPct(fin.taxRate));
+      add("F&E Investitionen", fmtNum(fin.rdInvestment, cur));
+    }
+    if (mgmt?.officers?.length) {
+      mgmt.officers.forEach(o => add(o.title || "Manager", o.name));
     }
 
-    const doc = new Document({ sections: [{ properties: {}, children: [
+    const children = [
       new Paragraph({ text: `${flag} ${company.name}`, heading: HeadingLevel.HEADING_1 }),
       new Paragraph({ text: "Unternehmenssteckbrief", heading: HeadingLevel.HEADING_2 }),
       new Table({ rows, width: { size: 100, type: WidthType.PERCENTAGE } }),
-      new Paragraph({ text: "" }),
-      ...(wiki?.extract ? [
-        new Paragraph({ text: "Über das Unternehmen", heading: HeadingLevel.HEADING_2 }),
-        new Paragraph({ children: [new TextRun({ text: wiki.extract, size: 20 })] }),
-        new Paragraph({ children: [new TextRun({ text: `Quelle: ${wiki.url}`, size: 16, color: "888888", italics: true })] }),
-      ] : []),
-      new Paragraph({ children: [new TextRun({ text: `Erstellt am: ${new Date().toLocaleString("de-DE")} | company-profiles`, size: 16, color: "888888", italics: true })] }),
-    ]}]});
+    ];
+    if (wiki?.extract) {
+      children.push(new Paragraph({ text: "" }));
+      children.push(new Paragraph({ text: "Über das Unternehmen", heading: HeadingLevel.HEADING_2 }));
+      children.push(new Paragraph({ children: [new TextRun({ text: wiki.extract, size: 20 })] }));
+    }
+    if (notes?.trim()) {
+      children.push(new Paragraph({ text: "" }));
+      children.push(new Paragraph({ text: "Meine Notizen", heading: HeadingLevel.HEADING_2 }));
+      children.push(new Paragraph({ children: [new TextRun({ text: notes.trim(), size: 20 })] }));
+    }
+    children.push(new Paragraph({ children: [new TextRun({ text: `Erstellt am: ${new Date().toLocaleString("de-DE")}`, size: 16, color: "888888", italics: true })] }));
 
+    const doc = new Document({ sections: [{ properties: {}, children }] });
     const blob = await Packer.toBlob(doc);
-    downloadBlob(blob, `${company.id}_profil.docx`, "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = `${company.id}_steckbrief.docx`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
   }
 };
-
-// ── Utility ───────────────────────────────────────────────────
-function loadScript(src) {
-  return new Promise((res, rej) => {
-    const s = document.createElement("script");
-    s.src = src; s.onload = res; s.onerror = rej;
-    document.head.appendChild(s);
-  });
-}
-
-function downloadBlob(blob, filename, type) {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url; a.download = filename;
-  document.body.appendChild(a); a.click();
-  document.body.removeChild(a); URL.revokeObjectURL(url);
-}
-
-function mdToHTML(md) {
-  return md
-    .replace(/^# (.+)$/gm, "<h1>$1</h1>")
-    .replace(/^## (.+)$/gm, "<h2>$1</h2>")
-    .replace(/^\| \*\*(.+?)\*\* \| (.+?) \|$/gm, "<tr><td>$1</td><td>$2</td></tr>")
-    .replace(/^\|.*\|.*\|$/gm, "") // remove table separators
-    .replace(/<tr>/g, () => { /* group into table */ return "<tr>"; })
-    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-    .replace(/\*(.+?)\*/g, "<em>$1</em>")
-    .replace(/\n\n/g, "</p><p>")
-    .replace(/^---$/gm, "<hr>")
-    .replace(/(<tr>.*<\/tr>\n?)+/gs, m => `<table>${m}</table>`)
-    .replace(/^(?!<)/gm, "<p>")
-    .replace(/(?<!>)$/gm, "</p>");
-}
